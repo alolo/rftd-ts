@@ -791,7 +791,7 @@ export class MainScene extends Phaser.Scene {
 
   public resetProfile() {
     this.confirmDialog.show(
-      "Вы уверены, что хотите сбросить прогресс\nи Никнейм?\n",
+      "Вы уверены, что хотите сбросить прогресс\nи Никнейм?",
       () => {
         localStorage.removeItem("td_save_code");
         localStorage.removeItem("td_player_nick");
