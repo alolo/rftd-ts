@@ -31,6 +31,7 @@ import { InputMenuUI } from "./ui/InputMenuUI";
 import { ENEMY_PATH, BLOCKED_CELLS } from "./config/mapData";
 import { HotkeysManager } from "./managers/hotkeysManager";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
+import { WaveController } from "./managers/waveController";
 
 const originalAddText = Phaser.GameObjects.GameObjectFactory.prototype.text;
 
@@ -75,10 +76,7 @@ export class MainScene extends Phaser.Scene {
   public rows!: number;
 
   // Таймеры
-  private waveTimerEvent: Phaser.Time.TimerEvent | null = null;
-  private spawnTimerEvent: Phaser.Time.TimerEvent | null = null;
   private lastUIUpdateTime: number = 0;
-  private currentWaveVariantId: number = 1;
 
   // UI Элементы
   public mainMenu!: MainMenu;
@@ -86,8 +84,6 @@ export class MainScene extends Phaser.Scene {
   public howToPlayMenu!: HowToPlayMenu;
   public bugReportMenu!: BugReportMenu;
 
-  private waveInfoText!: Phaser.GameObjects.Text;
-  private skipTimerBtn!: Phaser.GameObjects.Text;
   public marketAura!: Phaser.GameObjects.Graphics;
   public radialMenu!: RadialMenu;
 
@@ -125,8 +121,8 @@ export class MainScene extends Phaser.Scene {
   private gameTime: number = 0;
   public speedBtn!: Phaser.GameObjects.Container;
 
-  private difficultyMultiplier: number = 1.0;
-  private currentDifficultyLevel: Difficulty = "easy";
+  public difficultyMultiplier: number = 1.0;
+  public currentDifficultyLevel: Difficulty = "easy";
 
   public profileMenu!: ProfileMenuUI;
   public achievementsMenu!: AchievementsMenuUI;
@@ -135,9 +131,9 @@ export class MainScene extends Phaser.Scene {
   private activeNotifications: Phaser.GameObjects.Text[] = [];
   public informer!: Informer;
   public informerAura!: Phaser.GameObjects.Graphics;
-
   public inputMenu!: InputMenuUI;
   public confirmDialog!: ConfirmDialog;
+  public waveController!: WaveController;
   private hotkeys!: HotkeysManager;
 
   public get isTyping(): boolean {
@@ -430,30 +426,8 @@ export class MainScene extends Phaser.Scene {
 
     // --- СОЗДАНИЕ UI И СИСТЕМ ---
 
-    this.waveInfoText = this.add
-      .text(this.scale.width / 4, 80, "", {
-        fontSize: "20px",
-        color: "#ffffff",
-        fontStyle: "bold",
-        stroke: "#000000",
-        strokeThickness: 4,
-      })
-      .setOrigin(0.5)
-      .setDepth(20)
-      .setVisible(false);
-
-    this.skipTimerBtn = this.add
-      .text(this.scale.width / 2, 90, "[Пробел] Пропустить таймер ⏭", {
-        fontSize: "18px",
-        color: "#ffffff",
-        backgroundColor: "#555555",
-        padding: { x: 10, y: 5 },
-      })
-      .setOrigin(0.5)
-      .setDepth(20)
-      .setVisible(false)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerdown", () => this.skipPrepPhase());
+    this.waveController = new WaveController(this);
+    this.waveController.create();
 
     this.inventory = new Inventory(this, this.economy);
 
@@ -686,69 +660,12 @@ export class MainScene extends Phaser.Scene {
     this.goldText.setText(`: ${this.economy.gold}`);
     this.achievements.resetSession();
     this.waveManager.startNewGame();
-    this.startPrepPhase(this.waveManager.currentWave.prepTime);
+    this.waveController.startPrepPhase(this.waveManager.currentWave.prepTime);
 
     this.updateMarketUI();
     this.setGameSpeed(1);
 
     this.time.delayedCall(500, () => this.autoShowMarketPrices());
-  }
-
-  private startPrepPhase(seconds: number) {
-    this.waveInfoText.setVisible(true);
-    this.skipTimerBtn.setVisible(true);
-
-    let timeLeft = seconds;
-    this.waveTimerEvent = this.time.addEvent({
-      delay: 1000,
-      repeat: seconds - 1,
-      callback: () => {
-        timeLeft--;
-        this.waveInfoText.setText(
-          `До начала волны ${this.waveManager.currentWaveIndex + 1}/40: ${timeLeft} сек`,
-        );
-        if (timeLeft <= 0) this.startWave();
-      },
-    });
-    this.waveInfoText.setText(
-      `До начала волны ${this.waveManager.currentWaveIndex + 1}/40: ${timeLeft} сек`,
-    );
-  }
-
-  private startWave() {
-    this.skipTimerBtn.setVisible(false);
-    this.waveManager.startWave();
-    const currentConfig = this.waveManager.currentWave;
-    this.waveInfoText.setText(
-      `Волна ${this.waveManager.currentWaveIndex + 1} / ${this.waveManager.totalWaves}`,
-    );
-
-    this.currentWaveVariantId = Enemy.getNextVariantForWave(
-      currentConfig.enemyType,
-      this.waveManager.currentWaveIndex,
-    );
-
-    this.spawnTimerEvent = this.time.addEvent({
-      delay: currentConfig.spawnInterval,
-      repeat: currentConfig.count - 1,
-      callback: () => {
-        this.enemyManager.spawnEnemy(
-          currentConfig.enemyType,
-          this.currentWaveVariantId,
-          currentConfig.hpMultiplier * this.difficultyMultiplier,
-        );
-        this.waveManager.spawnedMobsCount++;
-      },
-    });
-  }
-
-  public skipPrepPhase() {
-    if (this.waveManager.state !== "prep") return;
-    if (this.waveTimerEvent) {
-      this.waveTimerEvent.destroy();
-      this.waveTimerEvent = null;
-    }
-    this.startWave();
   }
 
   public showHowToPlay() {
@@ -856,77 +773,12 @@ export class MainScene extends Phaser.Scene {
     this.enemyManager.update(this.gameTime, scaledDelta);
     this.builder.updateTowers(this.gameTime);
 
-    if (this.waveManager.state === "wave") {
-      const currentConfig = this.waveManager.currentWave;
-      if (
-        this.waveManager.spawnedMobsCount === currentConfig.count &&
-        this.enemyManager.enemies.length === 0
-      ) {
-        this.handleWaveCompletion(currentConfig.postPause);
-      }
-    }
+    this.waveController.update();
 
     if (time - this.lastUIUpdateTime > 150) {
       this.lastUIUpdateTime = time;
       this.updateSideMenuRealtime();
       this.achievements.checkPassiveConditions();
-    }
-  }
-
-  private handleWaveCompletion(postPause: number) {
-    this.waveManager.nextWave();
-
-    if (!this.achievements.baseHasTakenDamage) {
-      this.achievements.wavesPassedWithoutDamage++;
-      if (this.achievements.wavesPassedWithoutDamage >= 15)
-        this.achievements.unlock("armor_piercing");
-    }
-    this.achievements.baseHasTakenDamage = false;
-    this.achievements.towersSoldThisWave = 0;
-
-    const passedWave = this.waveManager.currentWaveIndex;
-
-    this.economy.addWood(20);
-    this.woodText.setText(`: ${this.economy.wood}`);
-
-    this.economy.addGold(passedWave <= 5 ? 200 : 150);
-    this.goldText.setText(`: ${this.economy.gold}`);
-
-    if (passedWave % 5 === 0) {
-      this.economy.addMedals(1);
-      this.medalsText.setText(`: ${this.economy.medals}`);
-  this.showNotification("Получена медаль!");
-}
-
-    if (passedWave <= 20) {
-      this.inventory.addItem("ticket", 1);
-      this.showNotification("Счастливый билет получен!");
-    }
-
-    for (let y = 0; y < this.rows; y++) {
-      for (let x = 0; x < this.cols; x++) {
-        const entity = this.builder.grid[y][x];
-        if (entity instanceof Crop) {
-          this.inventory.addItem(entity.type, 1);
-          entity.wavesAlive++;
-          if (entity.wavesAlive >= 2) {
-            entity.destroy();
-            this.builder.grid[y][x] = null;
-          }
-        }
-      }
-    }
-
-    this.economy.rollMarketFluctuations();
-    this.updateMarketUI();
-
-    this.time.delayedCall(500, () => this.autoShowMarketPrices());
-
-    if (this.waveManager.isVictory()) {
-      this.metaProgress.addWin(this.currentDifficultyLevel);
-      this.triggerGameOver(true);
-    } else {
-      this.startPrepPhase(postPause);
     }
   }
 
@@ -962,7 +814,7 @@ export class MainScene extends Phaser.Scene {
     this.sidePanel.showEnemy(enemy);
   }
 
-  private autoShowMarketPrices() {
+  public autoShowMarketPrices() {
     this.topBar?.autoShowMarketPrices();
   }
 

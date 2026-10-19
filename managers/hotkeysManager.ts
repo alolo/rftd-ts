@@ -118,9 +118,9 @@ export class HotkeysManager {
       this.scene.interaction.startTargetedMerge();
     });
 
-    kb.on("keydown-SPACE", () => {
+        kb.on("keydown-SPACE", () => {
       if (!this.scene.canUseHotkeys()) return;
-      this.scene.skipPrepPhase();
+      this.scene.waveController.skipPrepPhase();
     });
 
     kb.on("keydown-F", () => {

@@ -182,7 +182,7 @@ export class Enemy {
       this.renderer.hpText,
       this.renderer.stunIcon,
     ]);
-    this.container.setDepth(40);
+    this.container.setDepth(18);
     this.container.setSize(cellSize, cellSize);
     this.container.setInteractive({ useHandCursor: true });
     this.container.on(
@@ -243,7 +243,7 @@ export class Enemy {
     if (this.isDead || this.pathIndex >= this.path.length) return;
     if (this.isStunned) return;
 
-    this.container.setDepth(40 + this.container.y * 0.001);
+    this.container.setDepth(18 + this.container.y * 0.001);
 
     const targetCol = this.path[this.pathIndex].col;
     const targetRow = this.path[this.pathIndex].row;
