@@ -136,7 +136,7 @@ export class MainScene extends Phaser.Scene {
   public inputMenu!: InputMenuUI;
   public confirmDialog!: ConfirmDialog;
   public waveController!: WaveController;
-  public pathMask!: Phaser.Display.Masks.GeometryMask;
+  public pathMaskSource!: Phaser.GameObjects.Graphics;
   private hotkeys!: HotkeysManager;
 
   public get isTyping(): boolean {
@@ -362,7 +362,7 @@ export class MainScene extends Phaser.Scene {
         this.CELL_SIZE,
       );
     }
-    this.pathMask = maskShape.createGeometryMask();
+    this.pathMaskSource = maskShape; // это Graphics, который будет источником для Mask Filter
 
     this.rangeCircle = this.add.graphics().setDepth(4).setVisible(false);
     this.abilityRangeCircle = this.add.graphics().setDepth(4).setVisible(false);

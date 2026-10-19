@@ -75,11 +75,11 @@ export class EnemyManager {
     visual.fillStyle(color, 0.4);
     visual.fillCircle(x, y, radius);
     visual.setDepth(4);
-    visual.setMask(this.scene.pathMask);
+    visual.enableFilters().filters!.external.addMask(this.scene.pathMaskSource);
 
     const overlay = this.scene.add.graphics();
     overlay.setDepth(5);
-    overlay.setMask(this.scene.pathMask);
+    overlay.enableFilters().filters!.external.addMask(this.scene.pathMaskSource);
 
     const zoneType = this.classifyZoneColor(color, isBlackHole);
 
