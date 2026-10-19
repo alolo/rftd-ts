@@ -613,7 +613,7 @@ export const TOWER_DICTIONARY: Record<
       range: 180,
       fireRate: 1300,
       desc: "20% шанс оглушить мобов вокруг башни (128px) на 0.5с (урон 200)",
-      stunChance: 1,
+      stunChance: 0.2,
       stunRadius: 128,
       stunDamage: 200,
       stunDuration: 500,
