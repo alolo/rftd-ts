@@ -1562,13 +1562,13 @@ export class MainScene extends Phaser.Scene {
       callback: () => {
         timeLeft--;
         this.waveInfoText.setText(
-          `До начала волны ${this.waveManager.currentWaveIndex + 1}: ${timeLeft} сек`,
+          `До начала волны ${this.waveManager.currentWaveIndex + 1}/40: ${timeLeft} сек`,
         );
         if (timeLeft <= 0) this.startWave();
       },
     });
     this.waveInfoText.setText(
-      `До начала волны ${this.waveManager.currentWaveIndex + 1}: ${timeLeft} сек`,
+      `До начала волны ${this.waveManager.currentWaveIndex + 1}/40: ${timeLeft} сек`,
     );
   }
 
