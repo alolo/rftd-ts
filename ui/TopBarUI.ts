@@ -333,7 +333,7 @@ export class TopBarUI {
       });
     });
 
-    attachTooltip(this.scene, this.burgerBtn, "Цены на овощи");
+    attachTooltip(this.scene, this.burgerBtn, "[T] Цены на овощи");
   }
 
   private createSpeedButton(centerY: number) {

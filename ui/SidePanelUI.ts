@@ -22,6 +22,11 @@ export class SidePanelUI {
   public btnSell!: ActionButton;
   public btnReroll!: ActionButton;
 
+  private readonly PANEL_HEIGHT = 300;
+  private readonly PANEL_WIDTH = 1200;
+  private readonly PANEL_BOTTOM_MARGIN = 20;
+  private readonly PANEL_TOP_MARGIN = 80;
+
   private scene: MainScene;
 
   constructor(scene: MainScene) {
@@ -29,10 +34,11 @@ export class SidePanelUI {
   }
 
   public create() {
-    const panelWidth = 1200;
-    const panelHeight = 300;
+    const panelWidth = this.PANEL_WIDTH;
+    const panelHeight = this.PANEL_HEIGHT;
     const centerX = this.scene.scale.width / 2;
-    const centerY = this.scene.scale.height - panelHeight / 2 - 20;
+    const centerY =
+    this.scene.scale.height - panelHeight / 2 - this.PANEL_BOTTOM_MARGIN;
 
     this.container = this.scene.add
       .container(centerX, centerY)
@@ -302,6 +308,37 @@ export class SidePanelUI {
     this.container.add(closeBtn);
   }
 
+  private computePanelY(targetWorldY: number): number {
+    const screenH = this.scene.scale.height;
+    const bottomY =
+      screenH - this.PANEL_HEIGHT / 2 - this.PANEL_BOTTOM_MARGIN;
+    const topY = this.PANEL_HEIGHT / 2 + this.PANEL_TOP_MARGIN;
+    const bottomPanelTop = bottomY - this.PANEL_HEIGHT / 2;
+
+    if (targetWorldY > bottomPanelTop) return topY;
+    return bottomY;
+  }
+
+  private snapToY(y: number) {
+    this.scene.tweens.killTweensOf(this.container);
+    if (!this.container.visible || Math.abs(this.container.y - y) < 5) {
+      this.container.y = y;
+      return;
+    }
+    this.scene.tweens.add({
+      targets: this.container,
+      y,
+      duration: 220,
+      ease: "Cubic.easeOut",
+    });
+  }
+
+  public showTower(tower: Tower) {
+    this.snapToY(this.computePanelY(tower.centerY));
+    this.container.setDepth(50).setVisible(true);
+    this.renderTowerInfo(tower);
+  }
+
   private drawAbilityRange() {
     if (!this.scene.interaction.selectedCoords) return;
     const tower =
@@ -410,6 +447,7 @@ export class SidePanelUI {
   }
 
   public showEnemy(enemy: Enemy) {
+    this.snapToY(this.computePanelY(enemy.y));
     this.container.setDepth(50).setVisible(true);
     this.targetModeBtnText.setVisible(false);
     this.btnRandomMerge.setVisible(false);
@@ -423,6 +461,7 @@ export class SidePanelUI {
   }
 
   public showTowerFromInformer(level: number, variant: number) {
+    this.snapToY(this.computePanelY(this.scene.scale.height / 2));
     this.container.setDepth(400).setVisible(true);
     this.targetModeBtnText.setVisible(false);
     this.btnRandomMerge.setVisible(false);
@@ -433,6 +472,7 @@ export class SidePanelUI {
   }
 
   public showCrop(crop: Crop) {
+    this.snapToY(this.computePanelY(crop.centerY));
     this.container.setDepth(50).setVisible(true);
 
     this.towerIconGroup.setVisible(true);

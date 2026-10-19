@@ -153,7 +153,7 @@ export class InteractionManager {
       // ИСПРАВЛЕНО: автосужение типов TypeScript без ручных кастов "as"
       if (currentTower instanceof Crop) {
         this.scene.sidePanel.showCrop(currentTower);
-      } else if (currentTower instanceof Tower) {
+        } else if (currentTower instanceof Tower) {
         this.scene.rangeCircle.clear();
         this.scene.rangeCircle.lineStyle(2, 0xffffff, 0.3);
         this.scene.rangeCircle.strokeCircle(
@@ -163,8 +163,7 @@ export class InteractionManager {
         );
         this.scene.rangeCircle.setVisible(true);
 
-        // Всё UI (текст, кнопки, иконка) обновляется здесь:
-        this.scene.updateSideMenuRealtime();
+        this.scene.sidePanel.showTower(currentTower);
       }
     } else {
       const sameCell =

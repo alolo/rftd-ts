@@ -243,7 +243,7 @@ export class Enemy {
     if (this.isDead || this.pathIndex >= this.path.length) return;
     if (this.isStunned) return;
 
-    this.container.setDepth(10 + this.container.y * 0.001);
+    this.container.setDepth(40 + this.container.y * 0.001);
 
     const targetCol = this.path[this.pathIndex].col;
     const targetRow = this.path[this.pathIndex].row;
