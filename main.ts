@@ -2202,18 +2202,19 @@ export class MainScene extends Phaser.Scene {
     this.achievements.baseHasTakenDamage = false;
     this.achievements.towersSoldThisWave = 0;
 
+    const passedWave = this.waveManager.currentWaveIndex;
+
     this.economy.addWood(20);
     this.woodText.setText(`: ${this.economy.wood}`);
 
-    this.economy.addGold(150);
+    this.economy.addGold(passedWave <= 5 ? 200 : 150);
     this.goldText.setText(`: ${this.economy.gold}`);
 
-    const passedWave = this.waveManager.currentWaveIndex;
     if (passedWave % 5 === 0) {
       this.economy.addMedals(1);
       this.medalsText.setText(`: ${this.economy.medals}`);
-      this.showNotification("Получена медаль!");
-    }
+  this.showNotification("Получена медаль!");
+}
 
     if (passedWave <= 20) {
       this.inventory.addItem("ticket", 1);

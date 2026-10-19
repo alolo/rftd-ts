@@ -13,11 +13,6 @@ export class Crop {
   private auraGraphic: Phaser.GameObjects.Graphics; // Добавили графику для ауры
   private cellSize: number;
 
-  private readonly PANEL_HEIGHT = 300;
-  private readonly PANEL_WIDTH = 1200;
-  private readonly PANEL_BOTTOM_MARGIN = 20;
-  private readonly PANEL_TOP_MARGIN = 80;
-
   constructor(
     scene: Phaser.Scene,
     col: number,
