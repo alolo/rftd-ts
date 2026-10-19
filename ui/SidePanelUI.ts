@@ -22,8 +22,8 @@ export class SidePanelUI {
   public btnSell!: ActionButton;
   public btnReroll!: ActionButton;
 
-  private readonly PANEL_HEIGHT = 300;
-  private readonly PANEL_WIDTH = 1200;
+  private readonly PANEL_HEIGHT = 260;
+  private readonly PANEL_WIDTH = 1100;
   private readonly PANEL_BOTTOM_MARGIN = 20;
   private readonly PANEL_TOP_MARGIN = 80;
 
