@@ -254,6 +254,18 @@ export class PauseMenu {
       () => this.scene.restartGame(),
     );
 
+    const btnResetProfile = this.createButton(
+      centerX,
+      670,
+      "button_red.png",
+      "Сбросить профиль",
+      300,
+      55,
+      "20px",
+      "#ffffff",
+      () => this.scene.resetProfile(),
+    );
+
     // Сборка контейнера: сначала затемнение, потом панель, баннер и поверх кнопки
     this.container.add([
       clickBlocker,
@@ -265,6 +277,7 @@ export class PauseMenu {
       btnHowToPlay,
       btnAchievements,
       btnRestart,
+      btnResetProfile,
     ]);
   }
 

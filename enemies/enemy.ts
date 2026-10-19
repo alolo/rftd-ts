@@ -109,6 +109,22 @@ export class Enemy {
     return chosen;
   }
 
+  public getBaseSpeed(): number {
+    return this.baseSpeed;
+  }
+
+  public getEffectiveSpeed(): number {
+    if (this.isImmuneToSlow) return this.baseSpeed;
+
+    let totalSlowPct = this.auraSlowPct + this.activeSlowPct;
+    const mainScene = this.scene as any;
+    if (mainScene.metaProgress) {
+      totalSlowPct += mainScene.metaProgress.currentTitleId * 1;
+    }
+    const cappedSlowPct = Math.min(totalSlowPct, 50);
+    return this.baseSpeed * (1 - cappedSlowPct / 100);
+  }
+
   public getResistances() {
     return (
       Enemy.RESISTANCE_MATRIX[this.enemyType] ||
@@ -254,20 +270,7 @@ export class Enemy {
 
     const distance = Math.sqrt(dx * dx + dy * dy);
 
-    let finalSpeed = this.baseSpeed;
-
-    if (!this.isImmuneToSlow) {
-      let totalSlowPct = this.auraSlowPct + this.activeSlowPct;
-
-      const mainScene = this.scene as any;
-      if (mainScene.metaProgress) {
-        totalSlowPct += mainScene.metaProgress.currentTitleId * 1;
-      }
-
-      const cappedSlowPct = Math.min(totalSlowPct, 50);
-      finalSpeed = this.baseSpeed * (1 - cappedSlowPct / 100);
-    }
-
+    const finalSpeed = this.getEffectiveSpeed();
     const step = (finalSpeed * delta) / 1000;
 
     if (distance <= step) {
@@ -305,7 +308,9 @@ export class Enemy {
   public applySlow(slowPct: number, durationMs: number) {
     if (this.isImmuneToSlow || this.isDead) return;
 
-    if (this.slowTimer && this.activeSlowPct >= slowPct) {
+    // Слабый slow не должен перебивать сильный. Равный или сильный — обновляем
+    // таймер, чтобы slow не «мигал» при повторных попаданиях.
+    if (this.activeSlowPct > slowPct) {
       return;
     }
 

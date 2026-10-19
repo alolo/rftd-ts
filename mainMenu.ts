@@ -211,7 +211,7 @@ export class MainMenu {
     // 4. КНОПКИ
     const btnNewGame = this.createButton(
       this.scene.scale.width / 2,
-      350,
+      310,
       "button_red.png",
       "Начать новую игру",
       360,
@@ -225,7 +225,7 @@ export class MainMenu {
 
     const btnLoadGame = this.createButton(
       this.scene.scale.width / 2,
-      435,
+      395,
       "button_brown.png",
       "Загрузить игру",
       300,
@@ -257,7 +257,7 @@ export class MainMenu {
 
     const btnHowToPlay = this.createButton(
       this.scene.scale.width / 2,
-      520,
+      480,
       "button_grey.png",
       "Как играть",
       260,
@@ -271,7 +271,7 @@ export class MainMenu {
 
     const btnAchievements = this.createButton(
       this.scene.scale.width / 2,
-      605,
+      565,
       "button_brown.png",
       "Достижения",
       280,
@@ -283,9 +283,21 @@ export class MainMenu {
       },
     );
 
+    const btnResetProfile = this.createButton(
+      this.scene.scale.width / 2,
+      650,
+      "button_red.png",
+      "Сбросить профиль",
+      320,
+      55,
+      "20px",
+      "#ffffff",
+      () => this.scene.resetProfile(),
+    );
+
     const btnBugReport = this.createButton(
       this.scene.scale.width / 2,
-      690,
+      735,
       "button_grey.png",
       "Сообщить об ошибке",
       320,
@@ -309,6 +321,7 @@ export class MainMenu {
       btnHowToPlay,
       btnBugReport,
       btnAchievements,
+      btnResetProfile,
     ]);
   }
 

@@ -857,7 +857,10 @@ export class MainScene extends Phaser.Scene {
       if (!this.canUseHotkeys()) return;
       this.cycleGameSpeed();
     });
-
+    this.input.keyboard?.on("keydown-T", () => {
+      if (!this.canUseHotkeys()) return;
+      this.toggleBurgerPopup();
+    });
     this.input.keyboard?.on("keydown-J", () => {
       if (!this.canUseHotkeys()) return;
       if (this.achievementsMenuContainer.visible) {
@@ -1881,17 +1884,7 @@ export class MainScene extends Phaser.Scene {
       "button_red.png",
       "Сбросить",
       "#ffffff",
-      () => {
-        if (
-          window.confirm(
-            "Вы уверены, что хотите сбросить прогресс и Никнейм? Это безвозвратно удалит автосохранение!",
-          )
-        ) {
-          localStorage.removeItem("td_save_code");
-          localStorage.removeItem("td_player_nick");
-          window.location.reload();
-        }
-      },
+      () => this.resetProfile(),
     );
 
     const btnClose = makeBtn(
@@ -1965,6 +1958,18 @@ export class MainScene extends Phaser.Scene {
     this.anims.resumeAll();
 
     this.scene.restart();
+  }
+
+  public resetProfile() {
+    if (
+      window.confirm(
+        "Вы уверены, что хотите сбросить прогресс и Никнейм? Это безвозвратно удалит автосохранение!",
+      )
+    ) {
+      localStorage.removeItem("td_save_code");
+      localStorage.removeItem("td_player_nick");
+      window.location.reload();
+    }
   }
 
   private downloadSaveFile() {
@@ -3353,8 +3358,16 @@ export class MainScene extends Phaser.Scene {
   }
 
   private toggleBurgerPopup() {
-    this.burgerIsOpen = !this.burgerIsOpen;
-    const newFrame = this.burgerIsOpen
+    const willOpen = !this.burgerIsOpen;
+
+    // Ручной вызов — закрываем все остальные меню.
+    // Автоматический (autoShowMarketPrices) — НЕ закрывает.
+    if (willOpen) {
+      this.openMenu(null);
+    }
+
+    this.burgerIsOpen = willOpen;
+    const newFrame = willOpen
       ? "squareButtonWoodClose"
       : "squareButtonWoodBurger";
     const baseScale = this.burgerBtn.getData("baseScale") as number;
@@ -3378,7 +3391,7 @@ export class MainScene extends Phaser.Scene {
       },
     });
 
-    if (this.burgerIsOpen) {
+    if (willOpen) {
       this.showMarketPricesPopup(5000);
     } else {
       this.hideMarketPricesPopup();
@@ -3606,8 +3619,14 @@ export class MainScene extends Phaser.Scene {
       ? 0
       : Math.max(0, Math.floor(this.selectedEnemy.hp));
 
+    const baseSpd = Math.round(this.selectedEnemy.getBaseSpeed());
+    const curSpd = Math.round(this.selectedEnemy.getEffectiveSpeed());
+    const spdStr =
+      baseSpd === curSpd ? `${baseSpd}` : `${baseSpd} (${curSpd})`;
+
     this.towerInfoText.setText(
       `HP: ${displayHp} / ${this.selectedEnemy.maxHp}\n` +
+        `Скорость: ${spdStr}\n` +
         `Слабость: ${weakStr}\n` +
         `Защита: ${resistStr}`,
     );
