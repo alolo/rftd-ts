@@ -20,18 +20,31 @@ export class Skeleton {
     this.x = x;
     this.y = y;
 
-    // Рисуем кружок и череп
-    const bg = scene.add.graphics();
-    bg.fillStyle(0x333333, 1);
-    bg.fillCircle(0, 0, 14);
-    const text = scene.add
-      .text(0, 0, "💀", { fontSize: "18px" })
-      .setOrigin(0.5);
+    const mobKey = "mob_3_side";
+    const children: Phaser.GameObjects.GameObject[] = [];
 
-    this.container = scene.add.container(x, y, [bg, text]);
-    this.container.setDepth(6); // Слой чуть выше мобов
+    if (scene.textures.exists(mobKey)) {
+      // Визуал моба-скелета из наших текстур
+      const sprite = scene.add.sprite(0, 0, mobKey, `${mobKey}_0`);
+      sprite.setScale(0.7);
+      if (scene.anims.exists(`${mobKey}_walk`)) {
+        sprite.play(`${mobKey}_walk`);
+      }
+      children.push(sprite);
+    } else {
+      // Fallback на старый вид
+      const bg = scene.add.graphics();
+      bg.fillStyle(0x333333, 1);
+      bg.fillCircle(0, 0, 14);
+      const text = scene.add
+        .text(0, 0, "💀", { fontSize: "18px" })
+        .setOrigin(0.5);
+      children.push(bg, text);
+    }
 
-    // Скелет рассыпается через 15 секунд
+    this.container = scene.add.container(x, y, children);
+    this.container.setDepth(6);
+
     this.lifespanTimer = scene.time.addEvent({
       delay: 15000,
       callback: () => this.destroy(),

@@ -78,7 +78,6 @@ export class Mine {
   private explode(enemies: Enemy[]) {
     this.isExploding = true;
 
-    // Наносим урон по площади
     enemies.forEach((enemy) => {
       if (enemy.isDead) return;
       const dx = enemy.x - this.x;
@@ -88,20 +87,24 @@ export class Mine {
       }
     });
 
-    // Визуал взрыва (огненный шар)
-    const explosion = this.scene.add.graphics();
-    explosion.fillStyle(0xff4500, 0.6);
-    explosion.fillCircle(this.x, this.y, this.radius);
-    explosion.setDepth(14);
+    // Общий визуал с Вратами боли
+    const mainScene = this.scene as any;
+    if (mainScene.enemyManager?.spawnExplosion) {
+      mainScene.enemyManager.spawnExplosion(this.x, this.y, this.radius);
+    } else {
+      const explosion = this.scene.add.graphics();
+      explosion.fillStyle(0xff4500, 0.6);
+      explosion.fillCircle(this.x, this.y, this.radius);
+      explosion.setDepth(14);
+      this.scene.tweens.add({
+        targets: explosion,
+        alpha: 0,
+        duration: 300,
+        onComplete: () => explosion.destroy(),
+      });
+    }
 
-    this.scene.tweens.add({
-      targets: explosion,
-      alpha: 0,
-      duration: 300,
-      onComplete: () => explosion.destroy(),
-    });
-
-    this.destroy(); // Удаляем саму мину
+    this.destroy();
   }
 
   public destroy() {

@@ -613,7 +613,7 @@ export const TOWER_DICTIONARY: Record<
       range: 180,
       fireRate: 1300,
       desc: "20% шанс оглушить мобов вокруг башни (128px) на 0.5с (урон 200)",
-      stunChance: 0.2,
+      stunChance: 1,
       stunRadius: 128,
       stunDamage: 200,
       stunDuration: 500,
@@ -1012,25 +1012,44 @@ export class Tower {
       this.bonusDamageChance > 0 &&
       Phaser.Math.FloatBetween(0, 1) <= this.bonusDamageChance
     ) {
-      damage += this.bonusDamageAmount * buffMult;
+      const bonus = Math.floor(this.bonusDamageAmount * buffMult);
+      damage += bonus;
 
-      const txt = this.scene.add
-        .text(target.x, target.y - 30, `💥 СМЕРТЕЛЬНЫЙ УДАР!`, {
-          fontSize: "16px",
-          color: "#ff00ff",
-          fontStyle: "bold",
-          stroke: "#000000",
-          strokeThickness: 3,
-        })
-        .setOrigin(0.5)
-        .setDepth(20);
-      this.scene.tweens.add({
-        targets: txt,
-        y: target.y - 70,
-        alpha: 0,
-        duration: 1000,
-        onComplete: () => txt.destroy(),
-      });
+      if (this.level === 6 && this.variant === 13) {
+        // Король душ — столб света
+        (this.scene as any).enemyManager.spawnLightPillar(
+          target.x, target.y, 0xffffcc,
+        );
+      } else if (this.level === 6 && this.variant === 20) {
+        // Алтарь смерти — красный луч
+        (this.scene as any).enemyManager.spawnBeam(
+          this.centerX, this.centerY, target.x, target.y, 0xff2222,
+        );
+      } else if (this.level === 6 && this.variant === 16) {
+        // Рыцарь-Герой — текст с числом
+        (this.scene as any).enemyManager.spawnDamageText(
+          target.x, target.y, `+${bonus}!`, "#ffcc44",
+        );
+      } else {
+        // Fallback — старый текст
+        const txt = this.scene.add
+          .text(target.x, target.y - 30, `💥 СМЕРТЕЛЬНЫЙ УДАР!`, {
+            fontSize: "16px",
+            color: "#ff00ff",
+            fontStyle: "bold",
+            stroke: "#000000",
+            strokeThickness: 3,
+          })
+          .setOrigin(0.5)
+          .setDepth(20);
+        this.scene.tweens.add({
+          targets: txt,
+          y: target.y - 70,
+          alpha: 0,
+          duration: 1000,
+          onComplete: () => txt.destroy(),
+        });
+      }
     }
 
     let isCrit = false;
@@ -1047,25 +1066,30 @@ export class Tower {
     target.takeDamage(damage, this.damageType);
 
     if (isCrit && !wasDead) {
-      const critText = this.scene.add
-        .text(target.x, target.y - 20, `💥 ${damage}!`, {
-          fontSize: "20px",
-          color: "#ff3333",
-          fontStyle: "bold",
-          stroke: "#000000",
-          strokeThickness: 4,
-        })
-        .setOrigin(0.5)
-        .setDepth(20);
-
-      this.scene.tweens.add({
-        targets: critText,
-        y: target.y - 60,
-        alpha: 0,
-        duration: 800,
-        ease: "Power1",
-        onComplete: () => critText.destroy(),
-      });
+      if (this.level === 6 && this.variant === 1) {
+        // Камень душ (6-1) — столб душ + вспышка
+        (this.scene as any).enemyManager.spawnSoulCrit(target.x, target.y);
+      } else {
+        // Остальные crit-башни (Пулемёт 4-3 и др.) — старый текст
+        const critText = this.scene.add
+          .text(target.x, target.y - 20, `${damage}!`, {
+            fontSize: "20px",
+            color: "#ff3333",
+            fontStyle: "bold",
+            stroke: "#000000",
+            strokeThickness: 4,
+          })
+          .setOrigin(0.5)
+          .setDepth(20);
+        this.scene.tweens.add({
+          targets: critText,
+          y: target.y - 60,
+          alpha: 0,
+          duration: 800,
+          ease: "Power1",
+          onComplete: () => critText.destroy(),
+        });
+      }
     }
 
     if (
@@ -1362,19 +1386,51 @@ export class Tower {
           }
         });
 
-        const stunCircle = this.scene.add.graphics();
-        stunCircle.fillStyle(0xffff00, 0.4);
-        stunCircle.fillCircle(centerX, centerY, this.stunRadius);
-        stunCircle.setDepth(14);
-        this.scene.tweens.add({
-          targets: stunCircle,
-          alpha: 0,
-          duration: 300,
-          onComplete: () => stunCircle.destroy(),
-        });
+        // Специфичные визуалы по варианту башни
+        if (this.level === 6 && this.variant === 8) {
+          // Шаровая молния — электричество от башни
+          (this.scene as any).enemyManager.spawnElectricBurst(
+            this.centerX, this.centerY, this.stunRadius,
+          );
+        } else if (this.level === 6 && this.variant === 15) {
+          // Король гномов — трещины насыщенного цвета
+          (this.scene as any).enemyManager.spawnGroundCrack(
+            this.centerX, this.centerY, this.stunRadius, "gnome",
+          );
+        } else if (this.level === 5 && this.variant === 2) {
+          // Молот — трещины
+          (this.scene as any).enemyManager.spawnGroundCrack(
+            this.centerX, this.centerY, this.stunRadius, "hammer",
+          );
+        } else {
+          // Fallback для остальных (на всякий случай)
+          const stunCircle = this.scene.add.graphics();
+          stunCircle.fillStyle(0xffff00, 0.4);
+          stunCircle.fillCircle(centerX, centerY, this.stunRadius);
+          stunCircle.setDepth(14);
+          this.scene.tweens.add({
+            targets: stunCircle,
+            alpha: 0,
+            duration: 300,
+            onComplete: () => stunCircle.destroy(),
+          });
+        }
       } else {
         target.applyStun(this.stunDuration);
         if (extraStunDmg > 0) target.takeDamage(extraStunDmg, this.damageType);
+
+        // Одиночный стан — специфичные визуалы
+        if (this.level === 6 && this.variant === 7) {
+          // Магическая статуя — молния с неба
+          (this.scene as any).enemyManager.spawnLightningStrike(
+            target.x, target.y,
+          );
+        } else if (this.level === 6 && this.variant === 18) {
+          // Мировое древо — корни
+          (this.scene as any).enemyManager.spawnRootEntangle(
+            target.x, target.y, this.stunDuration,
+          );
+        }
       }
     }
 
@@ -1429,28 +1485,11 @@ export class Tower {
         });
 
         const waveAngle = Math.atan2(dy, dx);
-
-        const waveRect = this.scene.add.graphics();
-        waveRect.fillStyle(0x00ffff, 0.4);
-
-        waveRect.setPosition(this.centerX, this.centerY);
-        waveRect.setRotation(waveAngle);
-
-        waveRect.fillRect(
-          0,
-          -this.waveWidth / 2,
-          this.waveLength,
-          this.waveWidth,
+        const waveKind =
+          this.level === 6 && this.variant === 2 ? "lava" : "water";
+        (this.scene as any).enemyManager.spawnWaveVisual(
+          this.centerX, this.centerY, this.waveLength, this.waveWidth, waveAngle, waveKind,
         );
-        waveRect.setDepth(15);
-
-        this.scene.tweens.add({
-          targets: waveRect,
-          alpha: 0,
-          scaleX: 1.1,
-          duration: 250,
-          onComplete: () => waveRect.destroy(),
-        });
       }
     }
 
@@ -1475,6 +1514,12 @@ export class Tower {
       selected.forEach((enemy) => {
         enemy.takeDamage(this.randomTargetDamage * buffMult, this.damageType);
 
+        if (this.level === 6 && this.variant === 9) {
+          // Высший демон — разлёт крови
+          (this.scene as any).enemyManager.spawnBloodSplatter(enemy.x, enemy.y);
+        }
+
+        // Старый «луч сверху» для остальных random-target башен
         const beam = this.scene.add.graphics();
         beam.lineStyle(3, 0xff0055, 0.9);
         beam.beginPath();
@@ -1506,29 +1551,42 @@ export class Tower {
           }
         });
 
-        const pulseCircle = this.scene.add.graphics();
-        pulseCircle.lineStyle(
-          4,
-          this.pulseCount > 1 ? 0x00ffff : 0xaa0000,
-          0.8,
-        );
-        pulseCircle.setPosition(this.centerX, this.centerY);
-        pulseCircle.strokeCircle(0, 0, this.pulseRadius);
-        pulseCircle.setDepth(14);
-        this.scene.tweens.add({
-          targets: pulseCircle,
-          scale: 1.15,
-          alpha: 0,
-          duration: 450,
-          onComplete: () => pulseCircle.destroy(),
-        });
+        if (this.level === 6 && this.variant === 4) {
+          // Глыба льда — снежинки
+          (this.scene as any).enemyManager.spawnSnowBurst(
+            this.centerX, this.centerY, this.pulseRadius,
+          );
+        } else if (this.level === 6 && this.variant === 10) {
+          // Король вампиров — пузырь крови
+          (this.scene as any).enemyManager.spawnBloodBubble(
+            this.centerX, this.centerY, this.pulseRadius,
+          );
+        } else {
+          // Fallback — старое кольцо
+          const pulseCircle = this.scene.add.graphics();
+          pulseCircle.lineStyle(
+            4,
+            this.pulseCount > 1 ? 0x00ffff : 0xaa0000,
+            0.8,
+          );
+          pulseCircle.setPosition(this.centerX, this.centerY);
+          pulseCircle.strokeCircle(0, 0, this.pulseRadius);
+          pulseCircle.setDepth(14);
+          this.scene.tweens.add({
+            targets: pulseCircle,
+            scale: 1.15,
+            alpha: 0,
+            duration: 450,
+            onComplete: () => pulseCircle.destroy(),
+          });
+        }
       };
 
       doPulse();
 
       if (this.pulseCount > 1) {
         this.scene.time.addEvent({
-          delay: 500,
+          delay: 700,
           repeat: this.pulseCount - 2,
           callback: doPulse,
         });
