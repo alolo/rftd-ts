@@ -3,13 +3,11 @@ import "./style.css";
 import { Enemy } from "./enemies/enemy";
 import { WaveManager } from "./waves";
 import { EconomyManager } from "./economy";
-import { Crop } from "./Crop";
 import { Inventory } from "./inventory";
 import { Market } from "./market";
 import { LuckyTicket } from "./luckyTicket";
 import { MetaProgress } from "./metaProgress";
-import { TITLES, type Difficulty } from "./meta";
-import { SaveSystem } from "./saveSystem";
+import type { Difficulty } from "./meta";
 import { AchievementSystem } from "./achievementSystem";
 import { MainMenu } from "./ui/mainMenu";
 import { PauseMenu } from "./ui/pauseMenu";
@@ -20,8 +18,8 @@ import { BuilderManager } from "./managers/builderManager";
 import { EnemyManager } from "./managers/enemyManager";
 import { Informer } from "./informer";
 import { registerMobTextures } from "./enemies/mobGenerator/MobTextures";
-import { RadialMenu } from "./ui/radialMenu";
-import { attachTooltip, hideTooltip } from "./tooltip";
+import type { RadialMenu } from "./ui/radialMenu";
+import { hideTooltip } from "./tooltip";
 import { TopBarUI } from "./ui/TopBarUI";
 import { SidePanelUI } from "./ui/SidePanelUI";
 import { ProfileMenuUI } from "./ui/ProfileMenuUI";
@@ -32,6 +30,11 @@ import { ENEMY_PATH, BLOCKED_CELLS } from "./config/mapData";
 import { HotkeysManager } from "./managers/hotkeysManager";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { WaveController } from "./managers/waveController";
+import { MapBuildingsUI } from "./ui/MapBuildingsUI";
+import { NotificationUI } from "./ui/NotificationUI";
+import { registerSceneEvents } from "./managers/sceneEvents";
+import { createRadialMenu } from "./managers/radialMenuSetup";
+import { initializePlayer } from "./managers/playerInit";
 
 const originalAddText = Phaser.GameObjects.GameObjectFactory.prototype.text;
 
@@ -84,7 +87,8 @@ export class MainScene extends Phaser.Scene {
   public howToPlayMenu!: HowToPlayMenu;
   public bugReportMenu!: BugReportMenu;
 
-  public marketAura!: Phaser.GameObjects.Graphics;
+  public mapBuildings!: MapBuildingsUI;
+  public notificationUI!: NotificationUI;
   public radialMenu!: RadialMenu;
 
     // --- НОВЫЕ UI-МЕНЕДЖЕРЫ ---
@@ -128,9 +132,7 @@ export class MainScene extends Phaser.Scene {
   public achievementsMenu!: AchievementsMenuUI;
   public gameOverMenu!: GameOverMenuUI;
 
-  private activeNotifications: Phaser.GameObjects.Text[] = [];
   public informer!: Informer;
-  public informerAura!: Phaser.GameObjects.Graphics;
   public inputMenu!: InputMenuUI;
   public confirmDialog!: ConfirmDialog;
   public waveController!: WaveController;
@@ -269,7 +271,6 @@ export class MainScene extends Phaser.Scene {
 
   init() {
     this.gameLogs = [];
-    this.activeNotifications = [];
 
     if (!(console as any).isWrappedForGame) {
       const originalLog = console.log;
@@ -348,73 +349,6 @@ export class MainScene extends Phaser.Scene {
     this.add.image(0, 0, "map_bg").setOrigin(0, 0);
     this.drawGrid();
 
-    const mx = 22.5 * this.CELL_SIZE;
-    const my = 6 * this.CELL_SIZE;
-
-    // --- РЫНОК ---
-    this.marketAura = this.add.graphics();
-    this.marketAura.setPosition(mx + 64, my + 105);
-    this.drawBuildingAura(this.marketAura, 128, false);
-
-    const marketImg = this.add.image(mx + 64, my + 128, "market");
-    marketImg.setOrigin(0.5, 1);
-    marketImg.setDisplaySize(196, 196);
-
-    const mScaleX = marketImg.scaleX;
-    const mScaleY = marketImg.scaleY;
-
-    this.add.container(0, 0, [this.marketAura, marketImg]).setDepth(2);
-    const marketZone = this.add
-      .zone(mx, my, 128, 128)
-      .setOrigin(0, 0)
-      .setInteractive({ useHandCursor: true });
-
-    marketZone.on("pointerover", () => {
-      if (this.isPaused || this.isGameOver) return;
-      this.tweens.add({
-        targets: marketImg,
-        scaleX: mScaleX * 1.08,
-        scaleY: mScaleY * 1.08,
-        duration: 150,
-        ease: "Sine.easeOut",
-      });
-    });
-
-    marketZone.on("pointerout", () => {
-      this.tweens.add({
-        targets: marketImg,
-        scaleX: mScaleX,
-        scaleY: mScaleY,
-        duration: 150,
-        ease: "Sine.easeOut",
-      });
-    });
-
-    attachTooltip(this, marketZone, "Рынок овощей");
-
-    marketZone.on(
-      "pointerdown",
-      (
-        pointer: Phaser.Input.Pointer,
-        localX: number,
-        localY: number,
-        event: Phaser.Types.Input.EventData,
-      ) => {
-        event.stopPropagation();
-        if (this.isPaused || this.isGameOver) return;
-
-        this.tweens.add({
-          targets: marketImg,
-          scaleX: mScaleX * 0.95,
-          scaleY: mScaleY * 0.9,
-          duration: 60,
-          yoyo: true,
-        });
-
-        this.openMenu("market");
-      },
-    );
-
     this.rangeCircle = this.add.graphics().setDepth(4).setVisible(false);
     this.abilityRangeCircle = this.add.graphics().setDepth(4).setVisible(false);
 
@@ -441,6 +375,9 @@ export class MainScene extends Phaser.Scene {
     this.cols = Math.floor(this.scale.width / this.CELL_SIZE);
     this.rows = Math.floor(this.scale.height / this.CELL_SIZE);
     this.interaction = new InteractionManager(this);
+    this.mapBuildings = new MapBuildingsUI(this);
+    this.mapBuildings.create();
+    this.notificationUI = new NotificationUI(this);
     this.sidePanel = new SidePanelUI(this);
     this.sidePanel.create();
     this.topBar = new TopBarUI(this);
@@ -457,165 +394,12 @@ export class MainScene extends Phaser.Scene {
     this.howToPlayMenu = new HowToPlayMenu(this);
     this.bugReportMenu = new BugReportMenu(this);
 
-    const ix = 23 * this.CELL_SIZE;
-    const iy = 2 * this.CELL_SIZE;
-
-    // --- ИНФО (ЭНЦИКЛОПЕДИЯ) ---
-    this.informerAura = this.add.graphics();
-    this.informerAura.setPosition(ix + 32, iy + 60);
-    this.drawBuildingAura(this.informerAura, 70, false);
-
-    const informerImg = this.add.image(ix + 32, iy + 64, "informer");
-    informerImg.setOrigin(0.5, 1);
-    informerImg.setDisplaySize(112, 112);
-
-    const iScaleX = informerImg.scaleX;
-    const iScaleY = informerImg.scaleY;
-
-    this.add.container(0, 0, [this.informerAura, informerImg]).setDepth(2);
-    const informerZone = this.add
-      .zone(ix, iy, 64, 64)
-      .setOrigin(0, 0)
-      .setInteractive({ useHandCursor: true });
-
-    informerZone.on("pointerover", () => {
-      if (this.isPaused || this.isGameOver) return;
-      this.tweens.add({
-        targets: informerImg,
-        scaleX: iScaleX * 1.15,
-        scaleY: iScaleY * 1.15,
-        duration: 150,
-        ease: "Sine.easeOut",
-      });
-    });
-
-    informerZone.on("pointerout", () => {
-      this.tweens.add({
-        targets: informerImg,
-        scaleX: iScaleX,
-        scaleY: iScaleY,
-        duration: 150,
-        ease: "Sine.easeOut",
-      });
-    });
-
-    attachTooltip(this, informerZone, "Энциклопедия башен");
-
-    informerZone.on(
-      "pointerdown",
-      (
-        pointer: Phaser.Input.Pointer,
-        localX: number,
-        localY: number,
-        event: Phaser.Types.Input.EventData,
-      ) => {
-        event.stopPropagation();
-        if (this.isPaused || this.isGameOver) return;
-
-        this.tweens.add({
-          targets: informerImg,
-          scaleX: iScaleX * 0.9,
-          scaleY: iScaleY * 0.9,
-          duration: 60,
-          yoyo: true,
-        });
-
-        this.interaction.closeAllInGameMenus();
-        this.informer.show();
-      },
-    );
-
     this.informer = new Informer(this);
 
-    if (!SaveSystem.loadNickname()) {
-      this.mainMenu.setVisible(false);
-      this.showInputMenu(
-        "Придумайте Никнейм (до 12 букв):",
-        12,
-        (nick) => {
-          const finalNick = nick.trim() || "Player";
-          SaveSystem.setNickname(finalNick);
-          const savedCode = localStorage.getItem("td_save_code");
-          if (savedCode) this.metaProgress.applyCode(savedCode);
-          this.mainMenu.setVisible(true);
-        },
-        false,
-      );
-    } else {
-      const savedCode = localStorage.getItem("td_save_code");
-      if (savedCode) this.metaProgress.applyCode(savedCode);
-    }
+    initializePlayer(this);
 
-    this.radialMenu = new RadialMenu(this, {
-      build1: () => {
-        const c = this.interaction.activeCellCoords;
-        if (!c) return;
-        this.builder.buyTower(c.col, c.row, 1, this.economy.COST_CHEAP);
-      },
-      build4: () => {
-        const c = this.interaction.activeCellCoords;
-        if (!c) return;
-        this.builder.buyTower(c.col, c.row, 4, this.economy.COST_EXP);
-      },
-      goCrop: () => {
-        this.radialMenu.switchMode("crop");
-      },
-      plantPotato: () => {
-        const c = this.interaction.activeCellCoords;
-        if (!c) return;
-        this.builder.buyCrop(c.col, c.row, "potato");
-      },
-      plantOnion: () => {
-        const c = this.interaction.activeCellCoords;
-        if (!c) return;
-        this.builder.buyCrop(c.col, c.row, "onion");
-      },
-      plantPineapple: () => {
-        const c = this.interaction.activeCellCoords;
-        if (!c) return;
-        this.builder.buyCrop(c.col, c.row, "pineapple");
-      },
-      onClose: () => {
-        this.radialMenu.close();
-        this.interaction.activeCellCoords = null;
-      },
-    });
-    this.events.off("spawn-skeleton");
-    this.events.on("spawn-skeleton", (x: number, y: number) => {
-      this.enemyManager.spawnSkeleton(x, y);
-    });
-
-    this.events.off("trigger-owl-buff");
-    this.events.on("trigger-owl-buff", () => {
-      if (this.builder.activeTowers.length > 0) {
-        const randomTower = Phaser.Utils.Array.GetRandom(
-          this.builder.activeTowers,
-        );
-        randomTower.applyOwlBuff();
-      }
-    });
-
-    this.events.off("spawn-mine");
-    this.events.on(
-      "spawn-mine",
-      (mx: number, my: number, dmg: number, radius: number) => {
-        let spawnX = mx;
-        let spawnY = my;
-        if (mx === -1 && my === -1) {
-          const randIndex = Phaser.Math.Between(0, this.enemyPath.length - 2);
-          const p1 = this.enemyPath[randIndex];
-          const p2 = this.enemyPath[randIndex + 1];
-          const t = Phaser.Math.FloatBetween(0, 1);
-          spawnX =
-            (p1.col + (p2.col - p1.col) * t) * this.CELL_SIZE +
-            this.CELL_SIZE / 2;
-          spawnY =
-            (p1.row + (p2.row - p1.row) * t) * this.CELL_SIZE +
-            this.CELL_SIZE / 2;
-        }
-        this.enemyManager.spawnMine(spawnX, spawnY, dmg, radius);
-      },
-    );
+    this.radialMenu = createRadialMenu(this);
+    registerSceneEvents(this);
     this.hotkeys = new HotkeysManager(this);
     this.hotkeys.register();
   }
@@ -731,40 +515,9 @@ export class MainScene extends Phaser.Scene {
     this.waveManager.state = "menu";
     this.gameOverMenu.show(isVictory);
   }
-  public drawBuildingAura(
-    graphics: Phaser.GameObjects.Graphics,
-    width: number,
-    isSelected: boolean,
-  ) {
-    graphics.clear();
-
-    const shadowColor = 0x0a0a0a;
-
-    if (isSelected) {
-      graphics.fillStyle(shadowColor, 0.4);
-      graphics.fillEllipse(0, 0, width * 1, width * 0.3);
-
-      graphics.fillStyle(shadowColor, 0.7);
-      graphics.fillEllipse(0, 0, width * 0.85, width * 0.3);
-
-      graphics.lineStyle(2, 0xffff00, 1);
-      graphics.strokeEllipse(0, 0, width * 1.0, width * 0.3);
-    } else {
-      graphics.fillStyle(shadowColor, 0.3);
-      graphics.fillEllipse(0, 0, width * 1, width * 0.3);
-
-      graphics.fillStyle(shadowColor, 0.55);
-      graphics.fillEllipse(0, 0, width * 0.75, width * 0.3);
-    }
-  }
 
   update(time: number, delta: number) {
-    if (this.marketAura && this.market) {
-      this.drawBuildingAura(this.marketAura, 128, this.market.isVisible());
-    }
-    if (this.informerAura && this.informer) {
-      this.drawBuildingAura(this.informerAura, 64, this.informer.isVisible());
-    }
+    this.mapBuildings?.update();
     if (this.isPaused || this.isGameOver) return;
 
     const scaledDelta = delta * this.gameSpeed;
@@ -840,58 +593,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   public showNotification(message: string) {
-    const notif = this.add
-      .text(this.scale.width / 2, 80, message, {
-        fontSize: "24px",
-        color: "#ffff00",
-        fontStyle: "bold",
-        backgroundColor: "#000000cc",
-        padding: { x: 15, y: 10 },
-      })
-      .setOrigin(0.5)
-      .setDepth(1000)
-      .setAlpha(0);
-
-    this.activeNotifications.push(notif);
-
-    const startY = 80;
-    const stepY = 45;
-
-    const total = this.activeNotifications.length;
-    for (let i = 0; i < total; i++) {
-      const currentNotif = this.activeNotifications[i];
-      const offsetIndex = total - 1 - i;
-      const targetY = startY + offsetIndex * stepY;
-
-      this.tweens.add({
-        targets: currentNotif,
-        y: targetY,
-        duration: 200,
-        ease: "Power2",
-      });
-    }
-
-    this.tweens.add({
-      targets: notif,
-      alpha: 1,
-      duration: 250,
-    });
-
-    this.time.delayedCall(3000, () => {
-      if (!notif.active) return;
-
-      this.tweens.add({
-        targets: notif,
-        alpha: 0,
-        duration: 500,
-        onComplete: () => {
-          this.activeNotifications = this.activeNotifications.filter(
-            (n) => n !== notif,
-          );
-          notif.destroy();
-        },
-      });
-    });
+    this.notificationUI.show(message);
   }
 
   private drawGrid() {
