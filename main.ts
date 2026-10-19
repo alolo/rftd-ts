@@ -27,6 +27,7 @@ import { SidePanelUI } from "./ui/SidePanelUI";
 import { ProfileMenuUI } from "./ui/ProfileMenuUI";
 import { AchievementsMenuUI } from "./ui/AchievementsMenuUI";
 import { GameOverMenuUI } from "./ui/GameOverMenuUI";
+import { InputMenuUI } from "./ui/InputMenuUI";
 
 const originalAddText = Phaser.GameObjects.GameObjectFactory.prototype.text;
 
@@ -347,17 +348,11 @@ export class MainScene extends Phaser.Scene {
   public informer!: Informer;
   public informerAura!: Phaser.GameObjects.Graphics;
 
-  // UI сохранения/загрузки
-  private inputMenuContainer!: Phaser.GameObjects.Container;
-  private inputMenuTitle!: Phaser.GameObjects.Text;
-  private inputTextDisplay!: Phaser.GameObjects.Text;
-  private btnConfirmInput!: Phaser.GameObjects.Container;
-  private btnCancelInput!: Phaser.GameObjects.Container;
-  public isTyping: boolean = false;
-  private isSelectedAll: boolean = false;
-  private currentInputText: string = "";
-  private maxInputLength: number = 16;
-  private onInputConfirm: ((text: string) => void) | null = null;
+  public inputMenu!: InputMenuUI;
+
+  public get isTyping(): boolean {
+    return this.inputMenu?.isVisible ?? false;
+  }
 
   // Состояние
   public playerLives: number = 20;
@@ -475,27 +470,6 @@ export class MainScene extends Phaser.Scene {
       this.marketPopupContainer.visible
     );
   }
-
-  // ИСПРАВЛЕНО: единый обработчик paste, регистрируется один раз
-  private handlePasteEvent = (event: ClipboardEvent) => {
-    if (!this.isTyping) return;
-    if (this.isSelectedAll) {
-      this.currentInputText = "";
-      this.isSelectedAll = false;
-      this.inputTextDisplay.setBackgroundColor("transparent");
-    }
-    const pastedText = event.clipboardData?.getData("text") || "";
-    const cleanedText = pastedText.replace(/[^a-zA-Zа-яА-ЯёЁ0-9 \-]/g, "");
-
-    this.currentInputText += cleanedText;
-    if (this.currentInputText.length > this.maxInputLength) {
-      this.currentInputText = this.currentInputText.substring(
-        0,
-        this.maxInputLength,
-      );
-    }
-    this.inputTextDisplay.setText(this.currentInputText + "_");
-  };
 
   init() {
     this.gameLogs = [];
@@ -775,12 +749,19 @@ export class MainScene extends Phaser.Scene {
       if (this.isTyping) return;
 
       if (this.waveManager.state === "menu" || this.isGameOver) {
+        // Sub-menu выбора сложности в главном меню
         if (
           this.waveManager.state === "menu" &&
           this.mainMenu &&
           this.mainMenu.isDifficultyOpen
         ) {
           this.mainMenu.closeDifficultyMenu();
+          return;
+    }
+
+        // Любой открытый оверлей (Достижения / Как играть / Ошибка / Профиль / Инвентарь и т.п.)
+        if (this.anyMenuOpen()) {
+          this.openMenu(null);
         }
         return;
       }
@@ -816,56 +797,6 @@ export class MainScene extends Phaser.Scene {
       }
 
       this.togglePause();
-    });
-
-    this.input.keyboard?.on("keydown", (event: KeyboardEvent) => {
-      if (!this.isTyping) return;
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a") {
-        event.preventDefault();
-        this.isSelectedAll = true;
-        this.inputTextDisplay.setBackgroundColor("#0055aa");
-        return;
-      }
-      if (this.isSelectedAll) {
-        if (["Control", "Meta", "Shift", "Alt"].includes(event.key)) return;
-        this.isSelectedAll = false;
-        this.inputTextDisplay.setBackgroundColor("transparent");
-
-        if (
-          event.key === "Backspace" ||
-          event.key === "Delete" ||
-          (/^[a-zA-Zа-яА-ЯёЁ0-9_.\-!@#$%^&*()[\]? ]+$/.test(event.key) &&
-            event.key.length === 1)
-        ) {
-          this.currentInputText = "";
-          if (event.key === "Backspace" || event.key === "Delete") {
-            this.inputTextDisplay.setText(this.currentInputText + "_");
-            return;
-          }
-        }
-      }
-      if (event.key === "Backspace") {
-        this.currentInputText = this.currentInputText.slice(0, -1);
-      } else if (event.key === "Enter") {
-        this.confirmInput();
-      } else if (event.key === "Escape" && this.btnCancelInput.visible) {
-        this.cancelInput();
-      } else if (
-        event.key.length === 1 &&
-        this.currentInputText.length < this.maxInputLength
-      ) {
-        if (event.ctrlKey || event.metaKey) return;
-
-        if (/^[a-zA-Zа-яА-ЯёЁ0-9_.\-!@#$%^&*()[\]? ]+$/.test(event.key)) {
-          this.currentInputText += event.key;
-        }
-      }
-      this.inputTextDisplay.setText(this.currentInputText + "_");
-    });
-
-    window.addEventListener("paste", this.handlePasteEvent);
-    this.events.once("shutdown", () => {
-      window.removeEventListener("paste", this.handlePasteEvent);
     });
 
     // --- СОЗДАНИЕ UI И СИСТЕМ ---
@@ -914,13 +845,13 @@ export class MainScene extends Phaser.Scene {
     this.profileMenu = new ProfileMenuUI(this);
     this.achievementsMenu = new AchievementsMenuUI(this);
     this.gameOverMenu = new GameOverMenuUI(this);
+    this.inputMenu = new InputMenuUI(this);
     this.mainMenu = new MainMenu(this);
     this.market = new Market(this);
     this.luckyTicket = new LuckyTicket(this);
     this.pauseMenu = new PauseMenu(this);
     this.howToPlayMenu = new HowToPlayMenu(this);
     this.bugReportMenu = new BugReportMenu(this);
-    this.createInputMenu();
 
     const ix = 23 * this.CELL_SIZE;
     const iy = 2 * this.CELL_SIZE;
@@ -1091,208 +1022,15 @@ export class MainScene extends Phaser.Scene {
     return onPath || isBlocked;
   }
 
-  private createInputMenu() {
-    this.inputMenuContainer = this.add
-      .container(0, 0)
-      .setDepth(600)
-      .setVisible(false);
-
-    const centerX = this.scale.width / 2;
-    const centerY = this.scale.height / 2;
-
-    const blocker = this.add
-      .zone(centerX, centerY, this.scale.width, this.scale.height)
-      .setInteractive()
-      .on(
-        "pointerdown",
-        (
-          pointer: Phaser.Input.Pointer,
-          lx: number,
-          ly: number,
-          event: Phaser.Types.Input.EventData,
-        ) => {
-          event.stopPropagation();
-        },
-      );
-
-    const panelCorner = 30;
-    const panel = this.add.nineslice(
-      centerX,
-      centerY,
-      "ui",
-      "panel_brown.png",
-      620,
-      320,
-      panelCorner,
-      panelCorner,
-      panelCorner,
-      panelCorner,
-    );
-
-    this.inputMenuTitle = this.add
-      .text(centerX, centerY - 100, "Ввод", {
-        fontSize: "24px",
-        color: "#ffea88",
-        fontStyle: "bold",
-        stroke: "#000000",
-        strokeThickness: 4,
-      })
-      .setOrigin(0.5);
-
-    const tipSize = 32;
-
-    const inputBox = this.add.nineslice(
-      centerX,
-      centerY - 10,
-      "ui",
-      "hexagon_brown_dark.png",
-      48,
-      480,
-      0,
-      0,
-      tipSize,
-      tipSize,
-    );
-    inputBox.setAngle(90);
-
-    this.inputTextDisplay = this.add
-      .text(centerX, centerY - 10, "_", {
-        fontSize: "28px",
-        color: "#ffffff",
-        fontStyle: "bold",
-        stroke: "#000000",
-        strokeThickness: 3,
-      })
-      .setOrigin(0.5);
-
-    const makeMenuBtn = (
-      x: number,
-      y: number,
-      frame: string,
-      text: string,
-      textColor: string,
-      onClick: () => void,
-    ) => {
-      const btnCorner = 25;
-      const img = this.add.nineslice(
-        0,
-        0,
-        "ui",
-        frame,
-        190,
-        52,
-        btnCorner,
-        btnCorner,
-        btnCorner,
-        btnCorner,
-      );
-      const label = this.add
-        .text(0, 0, text, {
-          fontSize: "20px",
-          color: textColor,
-          fontStyle: "bold",
-          stroke: "#000000",
-          strokeThickness: 4,
-        })
-        .setOrigin(0.5);
-
-      const btn = this.add.container(x, y, [img, label]);
-
-      img
-        .setInteractive({ useHandCursor: true })
-        .on(
-          "pointerdown",
-          (
-            pointer: Phaser.Input.Pointer,
-            lx: number,
-            ly: number,
-            event: Phaser.Types.Input.EventData,
-          ) => {
-            event.stopPropagation();
-            this.tweens.add({
-              targets: btn,
-              scale: 0.9,
-              duration: 60,
-              yoyo: true,
-              onComplete: () => onClick(),
-            });
-          },
-        )
-        .on("pointerover", () => img.setTint(0xcccccc))
-        .on("pointerout", () => img.clearTint());
-
-      return btn;
-    };
-
-    this.btnConfirmInput = makeMenuBtn(
-      centerX - 110,
-      centerY + 85,
-      "button_brown.png",
-      "Принять",
-      "#aaffaa",
-      () => this.confirmInput(),
-    );
-    this.btnCancelInput = makeMenuBtn(
-      centerX + 110,
-      centerY + 85,
-      "button_red.png",
-      "Отмена",
-      "#ffffff",
-      () => this.cancelInput(),
-    );
-
-    this.inputMenuContainer.add([
-      blocker,
-      panel,
-      inputBox,
-      this.inputMenuTitle,
-      this.inputTextDisplay,
-      this.btnConfirmInput,
-      this.btnCancelInput,
-    ]);
-  }
-
   public showInputMenu(
     title: string,
     maxLength: number,
     onConfirm: (text: string) => void,
     allowCancel: boolean,
   ) {
-    this.isTyping = true;
-    this.currentInputText = "";
-    this.maxInputLength = maxLength;
-    this.onInputConfirm = onConfirm;
-
-    this.isSelectedAll = false;
-    this.inputTextDisplay.setBackgroundColor("transparent");
-    this.inputMenuTitle.setText(title);
-    this.inputTextDisplay.setText("_");
-
-    this.btnCancelInput.setVisible(allowCancel);
-    if (allowCancel) {
-      this.btnConfirmInput.setX(this.scale.width / 2 - 100);
-    } else {
-      this.btnConfirmInput.setX(this.scale.width / 2);
-    }
-
-    this.inputMenuContainer.setVisible(true);
+    this.inputMenu.show(title, maxLength, onConfirm, allowCancel);
   }
-
-  private confirmInput() {
-    if (!this.isTyping) return;
-    this.isTyping = false;
-    this.inputMenuContainer.setVisible(false);
-    if (this.onInputConfirm) {
-      this.onInputConfirm(this.currentInputText);
-    }
-  }
-
-  private cancelInput() {
-    if (!this.isTyping) return;
-    this.isTyping = false;
-    this.inputMenuContainer.setVisible(false);
-  }
-
+  
   public startGame(
     diffId: Difficulty,
     multiplier: number,
