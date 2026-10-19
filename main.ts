@@ -11,19 +11,22 @@ import { MetaProgress } from "./metaProgress";
 import { TITLES, type Difficulty } from "./meta";
 import { SaveSystem } from "./saveSystem";
 import { AchievementSystem } from "./achievementSystem";
-import { MainMenu } from "./mainMenu";
-import { PauseMenu } from "./pauseMenu";
-import { HowToPlayMenu } from "./howToPlayMenu";
+import { MainMenu } from "./ui/mainMenu";
+import { PauseMenu } from "./ui/pauseMenu";
+import { HowToPlayMenu } from "./ui/howToPlayMenu";
 import { BugReportMenu } from "./bugReportMenu";
 import { InteractionManager } from "./managers/interactionManager";
 import { BuilderManager } from "./managers/builderManager";
 import { EnemyManager } from "./managers/enemyManager";
 import { Informer } from "./informer";
 import { registerMobTextures } from "./enemies/mobGenerator/MobTextures";
-import { RadialMenu } from "./radialMenu";
+import { RadialMenu } from "./ui/radialMenu";
 import { attachTooltip, hideTooltip } from "./tooltip";
 import { TopBarUI } from "./ui/TopBarUI";
 import { SidePanelUI } from "./ui/SidePanelUI";
+import { ProfileMenuUI } from "./ui/ProfileMenuUI";
+import { AchievementsMenuUI } from "./ui/AchievementsMenuUI";
+import { GameOverMenuUI } from "./ui/GameOverMenuUI";
 
 const originalAddText = Phaser.GameObjects.GameObjectFactory.prototype.text;
 
@@ -307,8 +310,6 @@ export class MainScene extends Phaser.Scene {
   public rangeCircle!: Phaser.GameObjects.Graphics;
   public abilityRangeCircle!: Phaser.GameObjects.Graphics;
 
-  private gameOverMenuContainer!: Phaser.GameObjects.Container;
-
   // --- ГЕТТЕРЫ для обратной совместимости с внешними классами ---
   public get goldText() { return this.topBar.goldText; }
   public get woodText() { return this.topBar.woodText; }
@@ -338,10 +339,10 @@ export class MainScene extends Phaser.Scene {
   private difficultyMultiplier: number = 1.0;
   private currentDifficultyLevel: Difficulty = "easy";
 
-  private profileMenuContainer!: Phaser.GameObjects.Container;
-  private profileStatsText!: Phaser.GameObjects.Text;
+  public profileMenu!: ProfileMenuUI;
+  public achievementsMenu!: AchievementsMenuUI;
+  public gameOverMenu!: GameOverMenuUI;
 
-  private achievementsMenuContainer!: Phaser.GameObjects.Container;
   private activeNotifications: Phaser.GameObjects.Text[] = [];
   public informer!: Informer;
   public informerAura!: Phaser.GameObjects.Graphics;
@@ -404,9 +405,8 @@ export class MainScene extends Phaser.Scene {
     if (name !== "luckyTicket") this.luckyTicket.hide();
     if (name !== "howToPlay") this.howToPlayMenu.setVisible(false);
     if (name !== "bugReport") this.bugReportMenu.setVisible(false);
-    if (name !== "profile") this.profileMenuContainer.setVisible(false);
-    if (name !== "achievements")
-      this.achievementsMenuContainer.setVisible(false);
+    if (name !== "profile") this.profileMenu.hide();
+    if (name !== "achievements") this.achievementsMenu.hide();
     if (name !== "pause") this.pauseMenu.setVisible(false);
     if (name !== "side") {
       this.sideMenuContainer.setVisible(false);
@@ -446,11 +446,10 @@ export class MainScene extends Phaser.Scene {
         this.anims.pauseAll();
         break;
       case "profile":
-        this.showProfileMenu();
-        this.profileMenuContainer.setVisible(true);
+        this.profileMenu.show();
         break;
       case "achievements":
-        this.showAchievementsMenu();
+        this.achievementsMenu.show();
         break;
       case "howToPlay":
         this.howToPlayMenu.setVisible(true);
@@ -469,8 +468,8 @@ export class MainScene extends Phaser.Scene {
       this.luckyTicket.isVisible() ||
       this.howToPlayMenu.isVisible ||
       this.bugReportMenu.isVisible ||
-      this.profileMenuContainer.visible ||
-      this.achievementsMenuContainer.visible ||
+      this.profileMenu.visible ||
+      this.achievementsMenu.visible ||
       this.sideMenuContainer.visible ||
       this.radialMenu.isOpen ||
       this.marketPopupContainer.visible
@@ -732,7 +731,7 @@ export class MainScene extends Phaser.Scene {
     });
     this.input.keyboard?.on("keydown-I", () => {
       if (!this.canUseHotkeys()) return;
-      if (this.profileMenuContainer.visible) {
+      if (this.profileMenu.visible) {
         this.openMenu(null);
       } else {
         this.openMenu("profile");
@@ -761,10 +760,10 @@ export class MainScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-T", () => {
   if (!this.canUseHotkeys()) return;
   this.topBar?.toggleBurgerPopup();
-});
+    });
     this.input.keyboard?.on("keydown-J", () => {
       if (!this.canUseHotkeys()) return;
-      if (this.achievementsMenuContainer.visible) {
+      if (this.achievementsMenu.visible) {
         this.openMenu(null);
       } else {
         this.openMenu("achievements");
@@ -912,15 +911,16 @@ export class MainScene extends Phaser.Scene {
     this.sidePanel.create();
     this.topBar = new TopBarUI(this);
     this.topBar.create();
+    this.profileMenu = new ProfileMenuUI(this);
+    this.achievementsMenu = new AchievementsMenuUI(this);
+    this.gameOverMenu = new GameOverMenuUI(this);
     this.mainMenu = new MainMenu(this);
     this.market = new Market(this);
     this.luckyTicket = new LuckyTicket(this);
     this.pauseMenu = new PauseMenu(this);
-    this.createProfileMenu();
     this.howToPlayMenu = new HowToPlayMenu(this);
     this.bugReportMenu = new BugReportMenu(this);
     this.createInputMenu();
-    this.createAchievementsMenu();
 
     const ix = 23 * this.CELL_SIZE;
     const iy = 2 * this.CELL_SIZE;
@@ -1081,55 +1081,6 @@ export class MainScene extends Phaser.Scene {
         this.enemyManager.spawnMine(spawnX, spawnY, dmg, radius);
       },
     );
-  }
-
-  private createCurvedTitle(
-    x: number,
-    y: number,
-    text: string,
-    radius: number = 2400,
-    angleSpread: number = 0.14,
-    isRainbow: boolean = true,
-    fontSize: string = "36px",
-    textColor: string = "#ffffff",
-    strokeColor: string = "#000000",
-    strokeThickness: number = 6,
-  ) {
-    const container = this.add.container(x, y);
-    const chars = text.split("");
-
-    const startAngle = -angleSpread / 2;
-    const angleStep = angleSpread / Math.max(1, chars.length - 1);
-
-    for (let i = 0; i < chars.length; i++) {
-      const angle = startAngle + i * angleStep;
-
-      const charX = Math.sin(angle) * radius;
-      let charY = Math.cos(angle) * radius - radius;
-
-      if (isRainbow) {
-        charY = -charY;
-      }
-
-      const finalThickness =
-        strokeThickness > 0 ? strokeThickness : parseInt(fontSize) > 40 ? 6 : 4;
-
-      const letter = this.add
-        .text(charX, charY, chars[i], {
-          fontSize: fontSize,
-          color: textColor,
-          fontStyle: "bold",
-          stroke: strokeColor,
-          strokeThickness: finalThickness,
-        })
-        .setOrigin(0.5);
-
-      letter.setRotation(isRainbow ? angle : -angle);
-
-      container.add(letter);
-    }
-
-    return container;
   }
 
   public isPath(col: number, row: number): boolean {
@@ -1342,184 +1293,6 @@ export class MainScene extends Phaser.Scene {
     this.inputMenuContainer.setVisible(false);
   }
 
-  private createAchievementsMenu() {
-    this.achievementsMenuContainer = this.add
-      .container(0, 0)
-      .setDepth(600)
-      .setVisible(false);
-
-    const centerX = this.scale.width / 2;
-    const centerY = this.scale.height / 2;
-
-    const blocker = this.add
-      .zone(centerX, centerY, this.scale.width, this.scale.height)
-      .setInteractive()
-      .on(
-        "pointerdown",
-        (
-          pointer: Phaser.Input.Pointer,
-          lx: number,
-          ly: number,
-          event: Phaser.Types.Input.EventData,
-        ) => {
-          event.stopPropagation();
-        },
-      );
-
-    const panelWidth = 1250;
-    const panelHeight = 740;
-    const panelCorner = 30;
-
-    const panel = this.add.nineslice(
-      centerX,
-      centerY,
-      "ui",
-      "panel_brown.png",
-      panelWidth,
-      panelHeight,
-      panelCorner,
-      panelCorner,
-      panelCorner,
-      panelCorner,
-    );
-    panel.setTint(0xc5c5c5);
-
-    const banner = this.add.image(
-      centerX,
-      centerY - panelHeight / 2 + 12,
-      "ui",
-      "banner_classic_curtain.png",
-    );
-    banner.setScale(1.5, 1.2);
-
-    const title = this.createCurvedTitle(
-      centerX,
-      centerY - panelHeight / 2 + 4,
-      "Достижения",
-      3800,
-      0.06,
-      false,
-      "30px",
-    );
-
-    const btnCorner = 25;
-    const btnImg = this.add.nineslice(
-      0,
-      0,
-      "ui",
-      "button_red.png",
-      280,
-      56,
-      btnCorner,
-      btnCorner,
-      btnCorner,
-      btnCorner,
-    );
-    const btnLabel = this.add
-      .text(0, 0, "✖ ЗАКРЫТЬ", {
-        fontSize: "22px",
-        color: "#ffffff",
-        fontStyle: "bold",
-        stroke: "#000000",
-        strokeThickness: 4,
-      })
-      .setOrigin(0.5);
-
-    const btnClose = this.add.container(centerX, centerY + 310, [
-      btnImg,
-      btnLabel,
-    ]);
-
-    btnImg
-      .setInteractive({ useHandCursor: true })
-      .on(
-        "pointerdown",
-        (
-          pointer: Phaser.Input.Pointer,
-          lx: number,
-          ly: number,
-          event: Phaser.Types.Input.EventData,
-        ) => {
-          event.stopPropagation();
-          this.tweens.add({
-            targets: btnClose,
-            scale: 0.9,
-            duration: 60,
-            yoyo: true,
-            onComplete: () => this.achievementsMenuContainer.setVisible(false),
-          });
-        },
-      )
-      .on("pointerover", () => btnImg.setTint(0xcccccc))
-      .on("pointerout", () => btnImg.clearTint());
-
-    this.achievementsMenuContainer.add([
-      blocker,
-      panel,
-      banner,
-      title,
-      btnClose,
-    ]);
-  }
-
-  public showAchievementsMenu() {
-    while (this.achievementsMenuContainer.length > 5) {
-      const child = this.achievementsMenuContainer.last;
-      if (child) child.destroy();
-    }
-
-    const startXLeft = this.scale.width / 2 - 550;
-    const startXRight = this.scale.width / 2;
-    const startY = this.scale.height / 2 - 270;
-
-    this.achievements.list.forEach((ach, index) => {
-      const isLeftColumn = index % 2 === 0;
-      const x = isLeftColumn ? startXLeft : startXRight;
-      const y = startY + Math.floor(index / 2) * 48;
-
-      const statusIcon = ach.isCompleted ? "✅" : "❌";
-      const nameColor = ach.isCompleted
-        ? "#aaffaa"
-        : ach.isSecret
-          ? "#ffaaaa"
-          : "#fff5ea";
-
-      let desc = ach.description;
-      if (ach.isSecret && !ach.isCompleted) {
-        desc = ach.secretHint || "Секретное достижение";
-      }
-
-      let rewardStr = "";
-      if (ach.rewardWood) rewardStr += ` (+${ach.rewardWood}с)`;
-      if (ach.rewardGold) rewardStr += ` (+${ach.rewardGold}з)`;
-
-      const achNameText = this.add
-        .text(x, y, `${statusIcon} ${ach.name}${rewardStr}`, {
-          fontSize: "20px",
-          color: nameColor,
-          fontStyle: "bold",
-          stroke: "#000000",
-          strokeThickness: 3,
-        })
-        .setOrigin(0, 0);
-
-      const achDescText = this.add
-        .text(x + 35, y + 24, desc, {
-          fontSize: "14px",
-          color: "#bbaaaa",
-          fontStyle: "italic",
-        })
-        .setOrigin(0, 0);
-
-      this.achievementsMenuContainer.add([achNameText, achDescText]);
-    });
-
-    this.achievements.markAllSeen();
-    this.refreshAchievementsDot();
-
-    this.achievementsMenuContainer.setVisible(true);
-  }
-
   public startGame(
     diffId: Difficulty,
     multiplier: number,
@@ -1608,187 +1381,6 @@ export class MainScene extends Phaser.Scene {
     this.startWave();
   }
 
-  private createProfileMenu() {
-    this.profileMenuContainer = this.add
-      .container(0, 0)
-      .setDepth(600)
-      .setVisible(false);
-
-    const centerX = this.scale.width / 2;
-    const centerY = this.scale.height / 2;
-
-    const blocker = this.add
-      .zone(centerX, centerY, this.scale.width, this.scale.height)
-      .setInteractive()
-      .on(
-        "pointerdown",
-        (
-          pointer: Phaser.Input.Pointer,
-          lx: number,
-          ly: number,
-          event: Phaser.Types.Input.EventData,
-        ) => {
-          event.stopPropagation();
-        },
-      );
-
-    const panelWidth = 560;
-    const panelHeight = 480;
-    const panelCorner = 30;
-
-    const panel = this.add.nineslice(
-      centerX,
-      centerY,
-      "ui",
-      "panel_brown.png",
-      panelWidth,
-      panelHeight,
-      panelCorner,
-      panelCorner,
-      panelCorner,
-      panelCorner,
-    );
-    panel.setTint(0xc5c5c5);
-
-    const banner = this.add.image(
-      centerX,
-      centerY - panelHeight / 2 + 15,
-      "ui",
-      "banner_classic_curtain.png",
-    );
-    banner.setScale(1.15);
-
-    const title = this.createCurvedTitle(
-      centerX,
-      centerY - panelHeight / 2 + 8,
-      "Профиль",
-      3000,
-      0.045,
-      false,
-      "32px",
-    );
-
-    this.profileStatsText = this.add
-      .text(centerX, centerY - 35, "", {
-        fontSize: "21px",
-        color: "#fff5ea",
-        align: "center",
-        lineSpacing: 10,
-        stroke: "#000000",
-        strokeThickness: 3,
-      })
-      .setOrigin(0.5);
-
-    const makeBtn = (
-      x: number,
-      y: number,
-      frame: string,
-      text: string,
-      textColor: string,
-      onClick: () => void,
-    ) => {
-      const btnCorner = 25;
-      const img = this.add.nineslice(
-        0,
-        0,
-        "ui",
-        frame,
-        220,
-        56,
-        btnCorner,
-        btnCorner,
-        btnCorner,
-        btnCorner,
-      );
-      const label = this.add
-        .text(0, 0, text, {
-          fontSize: "20px",
-          color: textColor,
-          fontStyle: "bold",
-          stroke: "#000000",
-          strokeThickness: 4,
-        })
-        .setOrigin(0.5);
-
-      const btn = this.add.container(x, y, [img, label]);
-
-      img
-        .setInteractive({ useHandCursor: true })
-        .on(
-          "pointerdown",
-          (
-            pointer: Phaser.Input.Pointer,
-            lx: number,
-            ly: number,
-            event: Phaser.Types.Input.EventData,
-          ) => {
-            event.stopPropagation();
-            this.tweens.add({
-              targets: btn,
-              scale: 0.9,
-              duration: 60,
-              yoyo: true,
-              onComplete: () => onClick(),
-            });
-          },
-        )
-        .on("pointerover", () => img.setTint(0xcccccc))
-        .on("pointerout", () => img.clearTint());
-
-      return btn;
-    };
-
-    const btnReset = makeBtn(
-      centerX - 120,
-      centerY + 160,
-      "button_red.png",
-      "Сбросить",
-      "#ffffff",
-      () => this.resetProfile(),
-    );
-
-    const btnClose = makeBtn(
-      centerX + 120,
-      centerY + 160,
-      "button_brown.png",
-      "Закрыть",
-      "#ffffff",
-      () => {
-        this.openMenu(null);
-      },
-    );
-
-    this.profileMenuContainer.add([
-      blocker,
-      panel,
-      banner,
-      title,
-      this.profileStatsText,
-      btnReset,
-      btnClose,
-    ]);
-  }
-
-  public showProfileMenu() {
-    if (this.isGameOver || this.waveManager.state === "menu") return;
-
-    const titleId = this.metaProgress.currentTitleId;
-    const titleObj = TITLES.find((t) => t.id === titleId);
-    const titleName = titleObj ? titleObj.name : "Отсутствует";
-    const buffPct = titleId;
-    const nextTitleInfo = this.metaProgress.getNextTitleInfo();
-
-    this.profileStatsText.setText(
-      `Игрок: ${SaveSystem.nickname}\n\n` +
-        `Текущий титул: ${titleName}\n` +
-        `Атака: +${buffPct}% | Замедление: -${buffPct}%\n` +
-        `---------------------------------\n` +
-        `${nextTitleInfo}`,
-    );
-
-    // НЕ трогаем видимость — этим занимается openMenu.
-  }
-
   public showHowToPlay() {
     this.howToPlayMenu.setVisible(true);
   }
@@ -1832,296 +1424,8 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
-  private downloadSaveFile() {
-    if (!this.metaProgress) return;
-    const reportContent = this.metaProgress.generateSaveReport();
-    const blob = new Blob([reportContent], {
-      type: "text/plain;charset=utf-8",
-    });
-    const url = window.URL.createObjectURL(blob);
-
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    const hours = String(now.getHours()).padStart(2, "0");
-    const minutes = String(now.getMinutes()).padStart(2, "0");
-    const seconds = String(now.getSeconds()).padStart(2, "0");
-    const timestamp = `[${year}-${month}-${day}_${hours}-${minutes}-${seconds}]`;
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `TDSave_${SaveSystem.nickname}_${timestamp}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-
-    this.showNotification("💾 Файл успешно сохранен!");
-  }
-
-  private showGameOverMenu(isVictory: boolean) {
-    if (this.isGameOver) return;
-
-    this.isGameOver = true;
-    this.waveManager.state = "menu";
-
-    // if (this.waveTimerEvent) this.waveTimerEvent.paused = true;
-    // if (this.spawnTimerEvent) this.spawnTimerEvent.paused = true;
-
-    this.gameOverMenuContainer = this.add.container(0, 0).setDepth(650);
-
-    const centerX = this.scale.width / 2;
-    const centerY = this.scale.height / 2;
-
-    const clickBlocker = this.add
-      .zone(centerX, centerY, this.scale.width, this.scale.height)
-      .setInteractive()
-      .on(
-        "pointerdown",
-        (
-          pointer: Phaser.Input.Pointer,
-          lx: number,
-          ly: number,
-          event: Phaser.Types.Input.EventData,
-        ) => {
-          event.stopPropagation();
-        },
-      );
-
-    const panelWidth = 530;
-    const panelHeight = isVictory ? 530 : 380;
-    const panelCorner = 30;
-    const panelTexture = isVictory
-      ? "panel_brown.png"
-      : "panel_brown_damaged.png";
-    const panel = this.add.nineslice(
-      centerX,
-      centerY,
-      "ui",
-      panelTexture,
-      panelWidth,
-      panelHeight,
-      panelCorner,
-      panelCorner,
-      panelCorner,
-      panelCorner,
-    );
-
-    const banner = this.add.image(
-      centerX,
-      centerY - panelHeight / 2 + 15,
-      "ui",
-      "banner_classic_curtain.png",
-    );
-    banner.setScale(1.15);
-
-    const titleText = isVictory ? "Победа!" : "  Поражение...";
-    const spread = isVictory ? 0.06 : 0.12;
-
-    const title = this.createCurvedTitle(
-      centerX,
-      centerY - panelHeight / 2 + 8,
-      titleText,
-      2400,
-      spread,
-      false,
-      "36px",
-      "#ffffff",
-      "#000000",
-      6,
-    );
-
-    const makeBtn = (
-      x: number,
-      y: number,
-      frame: string,
-      text: string,
-      textColor: string,
-      onClick: () => void,
-    ) => {
-      const btnCorner = 25;
-      const img = this.add.nineslice(
-        0,
-        0,
-        "ui",
-        frame,
-        320,
-        56,
-        btnCorner,
-        btnCorner,
-        btnCorner,
-        btnCorner,
-      );
-      const label = this.add
-        .text(0, 0, text, {
-          fontSize: "22px",
-          color: textColor,
-          fontStyle: "bold",
-          stroke: "#000000",
-          strokeThickness: 4,
-        })
-        .setOrigin(0.5);
-
-      const btn = this.add.container(x, y, [img, label]);
-
-      img
-        .setInteractive({ useHandCursor: true })
-        .on(
-          "pointerdown",
-          (
-            pointer: Phaser.Input.Pointer,
-            lx: number,
-            ly: number,
-            event: Phaser.Types.Input.EventData,
-          ) => {
-            event.stopPropagation();
-            this.tweens.add({
-              targets: btn,
-              scale: 0.92,
-              duration: 60,
-              yoyo: true,
-              onComplete: () => onClick(),
-            });
-          },
-        )
-        .on("pointerover", () => img.setTint(0xcccccc))
-        .on("pointerout", () => img.clearTint());
-
-      return btn;
-    };
-
-    this.gameOverMenuContainer.add([clickBlocker, panel, banner, title]);
-
-    if (isVictory) {
-      const saveCode = localStorage.getItem("td_save_code") || "ОШИБКА";
-
-      const tipSize = 32;
-      const codeBox = this.add.nineslice(
-        centerX,
-        centerY - 65,
-        "ui",
-        "hexagon_damaged_brown_dark.png",
-        52,
-        420,
-        0,
-        0,
-        tipSize,
-        tipSize,
-      );
-      codeBox.setAngle(90);
-
-      const codeLabel = this.add
-        .text(centerX, centerY - 105, "Ваш код сохранения:", {
-          fontSize: "16px",
-          color: "#ffea88",
-          fontStyle: "bold",
-          stroke: "#000000",
-          strokeThickness: 3,
-        })
-        .setOrigin(0.5);
-
-      const codeText = this.add
-        .text(centerX, centerY - 65, saveCode, {
-          fontSize: "24px",
-          color: "#00ffff",
-          fontStyle: "bold",
-          stroke: "#000000",
-          strokeThickness: 4,
-        })
-        .setOrigin(0.5)
-        .setInteractive({ useHandCursor: true })
-        .on("pointerover", () => codeText.setColor("#ffff00"))
-        .on("pointerout", () => codeText.setColor("#00ffff"))
-        .on(
-          "pointerdown",
-          (
-            pointer: Phaser.Input.Pointer,
-            lx: number,
-            ly: number,
-            event: Phaser.Types.Input.EventData,
-          ) => {
-            event.stopPropagation();
-            navigator.clipboard
-              .writeText(saveCode)
-              .then(() => {
-                this.showNotification("📋 Код скопирован в буфер обмена!");
-              })
-              .catch(() => {
-                this.showNotification("❌ Ошибка копирования");
-              });
-          },
-        );
-
-      const copyHint = this.add
-        .text(centerX, centerY - 28, "(нажмите на код, чтобы скопировать)", {
-          fontSize: "13px",
-          color: "#252525",
-          fontStyle: "italic",
-        })
-        .setOrigin(0.5);
-
-      const btnSaveTxt = makeBtn(
-        centerX,
-        centerY + 45,
-        "button_brown.png",
-        "Скачать сохранение",
-        "#ffffff",
-        () => {
-          this.downloadSaveFile();
-        },
-      );
-
-      const btnRestart = makeBtn(
-        centerX,
-        centerY + 125,
-        "button_red.png",
-        "Начать заново",
-        "#ffffff",
-        () => {
-          this.restartGame();
-        },
-      );
-
-      this.gameOverMenuContainer.add([
-        codeBox,
-        codeLabel,
-        codeText,
-        copyHint,
-        btnSaveTxt,
-        btnRestart,
-      ]);
-    } else {
-      const defeatSubtitle = this.add
-        .text(
-          centerX,
-          centerY - 20,
-          "Оборона пала...\nПопробуйте другую тактику!",
-          {
-            fontSize: "24px",
-            fontStyle: "bold",
-            color: "#fff5ea",
-            align: "center",
-            lineSpacing: 10,
-            stroke: "#000000",
-            strokeThickness: 5,
-          },
-        )
-        .setOrigin(0.5);
-
-      const btnRestart = makeBtn(
-        centerX,
-        centerY + 145,
-        "button_red.png",
-        "Начать заново",
-        "#ffffff",
-        () => {
-          this.restartGame();
-        },
-      );
-
-      this.gameOverMenuContainer.add([defeatSubtitle, btnRestart]);
-    }
+  public showAchievementsMenu() {
+    this.achievementsMenu.show();
   }
 
   public updatePlayerLivesText() {
@@ -2129,9 +1433,11 @@ export class MainScene extends Phaser.Scene {
   }
 
   public triggerGameOver(isVictory: boolean) {
-    this.showGameOverMenu(isVictory);
+    if (this.isGameOver) return;
+    this.isGameOver = true;
+    this.waveManager.state = "menu";
+    this.gameOverMenu.show(isVictory);
   }
-
   public drawBuildingAura(
     graphics: Phaser.GameObjects.Graphics,
     width: number,
@@ -2285,11 +1591,11 @@ export class MainScene extends Phaser.Scene {
   }
 
   public get achievementsMenuVisible(): boolean {
-    return this.achievementsMenuContainer?.visible ?? false;
+    return this.achievementsMenu?.visible ?? false;
   }
 
   public get profileMenuVisible(): boolean {
-    return this.profileMenuContainer?.visible ?? false;
+    return this.profileMenu?.visible ?? false;
   }
 
   public cycleGameSpeed() {

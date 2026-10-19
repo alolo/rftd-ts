@@ -1,6 +1,6 @@
 import * as Phaser from "phaser";
-import type { MainScene } from "./main";
-import { attachTooltip, hideTooltip } from "./tooltip";
+import type { MainScene } from "../main";
+import { attachTooltip, hideTooltip } from "../tooltip";
 
 export type RadialMode = "build" | "crop";
 

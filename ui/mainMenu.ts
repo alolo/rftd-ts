@@ -1,7 +1,7 @@
 import * as Phaser from "phaser";
-import type { MainScene } from "./main";
-import type { Difficulty } from "./meta";
-import { SaveSystem } from "./saveSystem";
+import type { MainScene } from "../main";
+import type { Difficulty } from "../meta";
+import { SaveSystem } from "../saveSystem";
 
 export class MainMenu {
   private scene: MainScene;

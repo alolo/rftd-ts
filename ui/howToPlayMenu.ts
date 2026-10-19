@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import type { MainScene } from "./main";
+import type { MainScene } from "../main";
 
 export class HowToPlayMenu {
   private scene: MainScene;
