@@ -251,7 +251,7 @@ export class PauseMenu {
       58,
       "20px",
       "#ffaaaa",
-      () => this.scene.restartGame(),
+      () => this.scene.confirmRestart(),
     );
 
     const btnResetProfile = this.createButton(

@@ -28,6 +28,9 @@ import { ProfileMenuUI } from "./ui/ProfileMenuUI";
 import { AchievementsMenuUI } from "./ui/AchievementsMenuUI";
 import { GameOverMenuUI } from "./ui/GameOverMenuUI";
 import { InputMenuUI } from "./ui/InputMenuUI";
+import { ENEMY_PATH, BLOCKED_CELLS } from "./config/mapData";
+import { HotkeysManager } from "./managers/hotkeysManager";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 
 const originalAddText = Phaser.GameObjects.GameObjectFactory.prototype.text;
 
@@ -53,223 +56,8 @@ export class MainScene extends Phaser.Scene {
   public readonly CELL_SIZE = 64;
   public readonly SIDE_MENU_WIDTH = 450;
 
-  public enemyPath: { col: number; row: number }[] = [
-    { col: 2.5, row: 0 },
-    { col: 2.5, row: 4.5 },
-    { col: 4.5, row: 4.5 },
-    { col: 18.5, row: 4.5 },
-    { col: 18.5, row: 0.5 },
-    { col: 12.5, row: 0.5 },
-    { col: 12.5, row: 12.5 },
-    { col: 18.5, row: 12.5 },
-    { col: 18.5, row: 8.5 },
-    { col: 2.5, row: 8.5 },
-    { col: 2.5, row: 12.5 },
-    { col: 8.5, row: 12.5 },
-    { col: 8.5, row: 8.5 },
-    { col: 8.5, row: -1 },
-  ];
-
-  private blockedCells: { col: number; row: number }[] = [
-    { col: 2, row: 0 },
-    { col: 2, row: 1 },
-    { col: 2, row: 2 },
-    { col: 2, row: 3 },
-    { col: 2, row: 4 },
-    { col: 2, row: 5 },
-    { col: 3, row: 0 },
-    { col: 3, row: 1 },
-    { col: 3, row: 2 },
-    { col: 3, row: 3 },
-    { col: 3, row: 4 },
-    { col: 3, row: 5 },
-    { col: 4, row: 4 },
-    { col: 5, row: 4 },
-    { col: 6, row: 4 },
-    { col: 7, row: 4 },
-    { col: 8, row: 4 },
-    { col: 9, row: 4 },
-    { col: 10, row: 4 },
-    { col: 11, row: 4 },
-    { col: 12, row: 4 },
-    { col: 13, row: 4 },
-    { col: 14, row: 4 },
-    { col: 15, row: 4 },
-    { col: 16, row: 4 },
-    { col: 17, row: 4 },
-    { col: 18, row: 4 },
-    { col: 19, row: 4 },
-    { col: 4, row: 5 },
-    { col: 5, row: 5 },
-    { col: 6, row: 5 },
-    { col: 7, row: 5 },
-    { col: 8, row: 5 },
-    { col: 9, row: 5 },
-    { col: 10, row: 5 },
-    { col: 11, row: 5 },
-    { col: 12, row: 5 },
-    { col: 13, row: 5 },
-    { col: 14, row: 5 },
-    { col: 15, row: 5 },
-    { col: 16, row: 5 },
-    { col: 17, row: 5 },
-    { col: 18, row: 5 },
-    { col: 18, row: 2 },
-    { col: 18, row: 3 },
-    { col: 19, row: 5 },
-    { col: 19, row: 3 },
-    { col: 19, row: 2 },
-    { col: 19, row: 1 },
-    { col: 19, row: 0 },
-    { col: 18, row: 0 },
-    { col: 17, row: 0 },
-    { col: 16, row: 0 },
-    { col: 15, row: 0 },
-    { col: 14, row: 0 },
-    { col: 13, row: 0 },
-    { col: 12, row: 0 },
-    { col: 19, row: 1 },
-    { col: 18, row: 1 },
-    { col: 17, row: 1 },
-    { col: 16, row: 1 },
-    { col: 15, row: 1 },
-    { col: 14, row: 1 },
-    { col: 13, row: 1 },
-    { col: 12, row: 1 },
-    { col: 12, row: 2 },
-    { col: 12, row: 3 },
-    { col: 13, row: 2 },
-    { col: 13, row: 3 },
-    { col: 12, row: 6 },
-    { col: 12, row: 7 },
-    { col: 12, row: 8 },
-    { col: 12, row: 9 },
-    { col: 12, row: 10 },
-    { col: 12, row: 11 },
-    { col: 12, row: 12 },
-    { col: 12, row: 13 },
-    { col: 13, row: 6 },
-    { col: 13, row: 7 },
-    { col: 13, row: 8 },
-    { col: 13, row: 9 },
-    { col: 13, row: 10 },
-    { col: 13, row: 11 },
-    { col: 13, row: 12 },
-    { col: 13, row: 13 },
-    { col: 14, row: 13 },
-    { col: 15, row: 13 },
-    { col: 16, row: 13 },
-    { col: 17, row: 13 },
-    { col: 18, row: 13 },
-    { col: 19, row: 13 },
-    { col: 14, row: 12 },
-    { col: 15, row: 12 },
-    { col: 16, row: 12 },
-    { col: 17, row: 12 },
-    { col: 18, row: 12 },
-    { col: 19, row: 12 },
-    { col: 18, row: 11 },
-    { col: 19, row: 11 },
-    { col: 18, row: 10 },
-    { col: 19, row: 10 },
-    { col: 18, row: 9 },
-    { col: 19, row: 9 },
-    { col: 18, row: 8 },
-    { col: 19, row: 8 },
-    { col: 17, row: 8 },
-    { col: 16, row: 8 },
-    { col: 15, row: 8 },
-    { col: 14, row: 8 },
-    { col: 13, row: 8 },
-    { col: 12, row: 8 },
-    { col: 11, row: 8 },
-    { col: 10, row: 8 },
-    { col: 9, row: 8 },
-    { col: 8, row: 8 },
-    { col: 7, row: 8 },
-    { col: 6, row: 8 },
-    { col: 5, row: 8 },
-    { col: 4, row: 8 },
-    { col: 3, row: 8 },
-    { col: 2, row: 8 },
-    { col: 17, row: 9 },
-    { col: 16, row: 9 },
-    { col: 15, row: 9 },
-    { col: 14, row: 9 },
-    { col: 13, row: 9 },
-    { col: 12, row: 9 },
-    { col: 11, row: 9 },
-    { col: 10, row: 9 },
-    { col: 9, row: 9 },
-    { col: 8, row: 9 },
-    { col: 7, row: 9 },
-    { col: 6, row: 9 },
-    { col: 5, row: 9 },
-    { col: 4, row: 9 },
-    { col: 3, row: 9 },
-    { col: 2, row: 9 },
-    { col: 2, row: 10 },
-    { col: 2, row: 11 },
-    { col: 2, row: 12 },
-    { col: 2, row: 13 },
-    { col: 3, row: 10 },
-    { col: 3, row: 11 },
-    { col: 3, row: 12 },
-    { col: 3, row: 13 },
-    { col: 4, row: 13 },
-    { col: 5, row: 13 },
-    { col: 6, row: 13 },
-    { col: 7, row: 13 },
-    { col: 8, row: 13 },
-    { col: 9, row: 13 },
-    { col: 4, row: 12 },
-    { col: 5, row: 12 },
-    { col: 6, row: 12 },
-    { col: 7, row: 12 },
-    { col: 8, row: 12 },
-    { col: 9, row: 12 },
-    { col: 9, row: 11 },
-    { col: 9, row: 10 },
-    { col: 9, row: 7 },
-    { col: 9, row: 6 },
-    { col: 9, row: 3 },
-    { col: 9, row: 2 },
-    { col: 9, row: 1 },
-    { col: 9, row: 0 },
-    { col: 8, row: 11 },
-    { col: 8, row: 10 },
-    { col: 8, row: 7 },
-    { col: 8, row: 6 },
-    { col: 8, row: 3 },
-    { col: 8, row: 2 },
-    { col: 8, row: 1 },
-    { col: 8, row: 0 },
-    { col: 22, row: 8 },
-    { col: 22, row: 9 },
-    { col: 22, row: 10 },
-    { col: 22, row: 11 },
-    { col: 22, row: 12 },
-    { col: 22, row: 13 },
-    { col: 23, row: 8 },
-    { col: 23, row: 9 },
-    { col: 23, row: 10 },
-    { col: 23, row: 11 },
-    { col: 23, row: 12 },
-    { col: 23, row: 13 },
-    { col: 24, row: 8 },
-    { col: 24, row: 9 },
-    { col: 24, row: 10 },
-    { col: 24, row: 11 },
-    { col: 24, row: 12 },
-    { col: 22, row: 6 },
-    { col: 23, row: 6 },
-    { col: 24, row: 6 },
-    { col: 22, row: 7 },
-    { col: 23, row: 7 },
-    { col: 24, row: 7 },
-    { col: 24, row: 13 },
-    { col: 23, row: 2 },
-  ];
+  public enemyPath = ENEMY_PATH;
+  private blockedCells = BLOCKED_CELLS;
 
   // --- СИСТЕМЫ ---
   public waveManager: WaveManager = new WaveManager();
@@ -349,6 +137,8 @@ export class MainScene extends Phaser.Scene {
   public informerAura!: Phaser.GameObjects.Graphics;
 
   public inputMenu!: InputMenuUI;
+  public confirmDialog!: ConfirmDialog;
+  private hotkeys!: HotkeysManager;
 
   public get isTyping(): boolean {
     return this.inputMenu?.isVisible ?? false;
@@ -386,8 +176,17 @@ export class MainScene extends Phaser.Scene {
       | "bugReport"
       | null,
   ) {
-    // Если выходим из паузы — размораживаем.
-    if (this.isPaused && name !== "pause") {
+    // Если из паузы открывают одно из этих меню — паузу СОХРАНЯЕМ
+    // (pauseMenu остаётся внизу, оверлей рисуется поверх).
+    const isPausePreserved =
+      this.isPaused &&
+      (name === "achievements" ||
+        name === "howToPlay" ||
+        name === "bugReport" ||
+        name === "profile");
+
+    // Обычный выход из паузы (не в оверлей) — размораживаем.
+    if (!isPausePreserved && this.isPaused && name !== "pause") {
       this.isPaused = false;
       this.pauseMenu.setVisible(false);
       this.time.paused = false;
@@ -402,7 +201,8 @@ export class MainScene extends Phaser.Scene {
     if (name !== "bugReport") this.bugReportMenu.setVisible(false);
     if (name !== "profile") this.profileMenu.hide();
     if (name !== "achievements") this.achievementsMenu.hide();
-    if (name !== "pause") this.pauseMenu.setVisible(false);
+    if (name !== "pause" && !isPausePreserved)
+      this.pauseMenu.setVisible(false);
     if (name !== "side") {
       this.sideMenuContainer.setVisible(false);
       this.interaction.deselectTower();
@@ -455,7 +255,7 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
-  private anyMenuOpen(): boolean {
+  public anyMenuOpen(): boolean {
     return (
       this.inventory.isVisible ||
       this.market.isVisible() ||
@@ -508,7 +308,7 @@ export class MainScene extends Phaser.Scene {
     this.gameTime = 0;
   }
 
-  private canUseHotkeys(): boolean {
+  public canUseHotkeys(): boolean {
     if (this.isTyping) return false;
     if (this.isPaused) return false;
     if (this.isGameOver) return false;
@@ -628,177 +428,6 @@ export class MainScene extends Phaser.Scene {
     this.builder = new BuilderManager(this);
     this.enemyManager = new EnemyManager(this);
 
-    // --- ГОРЯЧИЕ КЛАВИШИ ---
-    this.input.keyboard?.on("keydown-ONE", () => {
-      if (!this.canUseHotkeys()) return;
-      if (this.inventory && this.inventory.isSellMenuVisible()) {
-        this.inventory.handleKeyOne();
-        return;
-      }
-      if (!this.radialMenu.isOpen) return;
-      const c = this.interaction.activeCellCoords;
-      if (!c) return;
-      if (this.radialMenu.mode === "build") {
-        this.builder.buyTower(c.col, c.row, 1, this.economy.COST_CHEAP);
-      } else {
-        this.builder.buyCrop(c.col, c.row, "potato");
-      }
-    });
-
-    this.input.keyboard?.on("keydown-TWO", () => {
-      if (!this.canUseHotkeys()) return;
-      if (this.inventory && this.inventory.isSellMenuVisible()) {
-        this.inventory.handleKeyTwo();
-        return;
-      }
-      if (!this.radialMenu.isOpen) return;
-      const c = this.interaction.activeCellCoords;
-      if (!c) return;
-      if (this.radialMenu.mode === "build") {
-        this.builder.buyTower(c.col, c.row, 4, this.economy.COST_EXP);
-      } else {
-        this.builder.buyCrop(c.col, c.row, "onion");
-      }
-    });
-
-    this.input.keyboard?.on("keydown-THREE", () => {
-      if (!this.canUseHotkeys()) return;
-      if (!this.radialMenu.isOpen) return;
-      const c = this.interaction.activeCellCoords;
-      if (!c) return;
-      if (this.radialMenu.mode === "build") {
-        this.radialMenu.switchMode("crop");
-      } else {
-        this.builder.buyCrop(c.col, c.row, "pineapple");
-      }
-    });
-
-    this.input.keyboard?.on("keydown-B", () => {
-      if (!this.canUseHotkeys()) return;
-      if (this.inventory.isVisible) {
-        this.openMenu(null);
-      } else {
-        this.openMenu("inventory");
-      }
-    });
-    this.input.keyboard?.on("keydown-S", () => {
-      if (!this.canUseHotkeys()) return;
-      if (this.interaction.selectedCoords)
-        this.builder.sellTower(
-          this.interaction.selectedCoords.col,
-          this.interaction.selectedCoords.row,
-        );
-    });
-    this.input.keyboard?.on("keydown-R", () => {
-      if (!this.canUseHotkeys()) return;
-      if (
-        this.sideMenuContainer.visible &&
-        this.btnReroll &&
-        this.btnReroll.visible &&
-        this.interaction.selectedCoords
-      ) {
-        this.builder.rerollTower(
-          this.interaction.selectedCoords.col,
-          this.interaction.selectedCoords.row,
-        );
-      }
-    });
-    this.input.keyboard?.on("keydown-I", () => {
-      if (!this.canUseHotkeys()) return;
-      if (this.profileMenu.visible) {
-        this.openMenu(null);
-      } else {
-        this.openMenu("profile");
-      }
-    });
-    this.input.keyboard?.on("keydown-Q", () => {
-      if (!this.canUseHotkeys()) return;
-      this.interaction.cycleTargetMode();
-    });
-    this.input.keyboard?.on("keydown-W", () => {
-      if (!this.canUseHotkeys()) return;
-      this.interaction.doRandomMerge();
-    });
-    this.input.keyboard?.on("keydown-E", () => {
-      if (!this.canUseHotkeys()) return;
-      this.interaction.startTargetedMerge();
-    });
-    this.input.keyboard?.on("keydown-SPACE", () => {
-      if (!this.canUseHotkeys()) return;
-      this.skipPrepPhase();
-    });
-    this.input.keyboard?.on("keydown-F", () => {
-      if (!this.canUseHotkeys()) return;
-      this.cycleGameSpeed();
-    });
-    this.input.keyboard?.on("keydown-T", () => {
-  if (!this.canUseHotkeys()) return;
-  this.topBar?.toggleBurgerPopup();
-    });
-    this.input.keyboard?.on("keydown-J", () => {
-      if (!this.canUseHotkeys()) return;
-      if (this.achievementsMenu.visible) {
-        this.openMenu(null);
-      } else {
-        this.openMenu("achievements");
-      }
-    });
-
-    this.input.keyboard?.on("keydown-ESC", () => {
-      hideTooltip();
-      if (this.isTyping) return;
-
-      if (this.waveManager.state === "menu" || this.isGameOver) {
-        // Sub-menu выбора сложности в главном меню
-        if (
-          this.waveManager.state === "menu" &&
-          this.mainMenu &&
-          this.mainMenu.isDifficultyOpen
-        ) {
-          this.mainMenu.closeDifficultyMenu();
-          return;
-    }
-
-        // Любой открытый оверлей (Достижения / Как играть / Ошибка / Профиль / Инвентарь и т.п.)
-        if (this.anyMenuOpen()) {
-          this.openMenu(null);
-        }
-        return;
-      }
-
-      // Радиальное меню в режиме овощей — ESC возвращает в постройку, а не закрывает.
-      if (this.radialMenu.isOpen && this.radialMenu.mode === "crop") {
-        this.radialMenu.switchMode("build");
-        return;
-      }
-
-      if (
-        this.interaction.selectedInformerTower &&
-        this.sideMenuContainer.visible
-      ) {
-        this.sidePanel.close();
-        return;
-      }
-
-      if (this.anyMenuOpen()) {
-        this.openMenu(null);
-        return;
-      }
-
-      if (this.interaction.isWaitingForMergeTarget) {
-        this.interaction.isWaitingForMergeTarget = false;
-        this.showNotification("Слияние отменено");
-        return;
-      }
-
-      if (this.interaction.selectedCoords) {
-        this.interaction.deselectTower();
-        return;
-      }
-
-      this.togglePause();
-    });
-
     // --- СОЗДАНИЕ UI И СИСТЕМ ---
 
     this.waveInfoText = this.add
@@ -846,6 +475,7 @@ export class MainScene extends Phaser.Scene {
     this.achievementsMenu = new AchievementsMenuUI(this);
     this.gameOverMenu = new GameOverMenuUI(this);
     this.inputMenu = new InputMenuUI(this);
+    this.confirmDialog = new ConfirmDialog(this);
     this.mainMenu = new MainMenu(this);
     this.market = new Market(this);
     this.luckyTicket = new LuckyTicket(this);
@@ -1012,6 +642,8 @@ export class MainScene extends Phaser.Scene {
         this.enemyManager.spawnMine(spawnX, spawnY, dmg, radius);
       },
     );
+    this.hotkeys = new HotkeysManager(this);
+    this.hotkeys.register();
   }
 
   public isPath(col: number, row: number): boolean {
@@ -1030,7 +662,7 @@ export class MainScene extends Phaser.Scene {
   ) {
     this.inputMenu.show(title, maxLength, onConfirm, allowCancel);
   }
-  
+
   public startGame(
     diffId: Difficulty,
     multiplier: number,
@@ -1110,7 +742,7 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
-  private skipPrepPhase() {
+  public skipPrepPhase() {
     if (this.waveManager.state !== "prep") return;
     if (this.waveTimerEvent) {
       this.waveTimerEvent.destroy();
@@ -1150,16 +782,22 @@ export class MainScene extends Phaser.Scene {
     this.scene.restart();
   }
 
+  public confirmRestart() {
+    this.confirmDialog.show(
+      "Начать заново?\nВесь текущий прогресс в этой игре будет потерян.",
+      () => this.restartGame(),
+    );
+  }
+
   public resetProfile() {
-    if (
-      window.confirm(
-        "Вы уверены, что хотите сбросить прогресс и Никнейм? Это безвозвратно удалит автосохранение!",
-      )
-    ) {
-      localStorage.removeItem("td_save_code");
-      localStorage.removeItem("td_player_nick");
-      window.location.reload();
-    }
+    this.confirmDialog.show(
+      "Вы уверены, что хотите сбросить прогресс\nи Никнейм?\n",
+      () => {
+        localStorage.removeItem("td_save_code");
+        localStorage.removeItem("td_player_nick");
+        window.location.reload();
+      },
+    );
   }
 
   public showAchievementsMenu() {
