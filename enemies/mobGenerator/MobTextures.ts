@@ -73,9 +73,24 @@ function registerTexture(
 }
 
 export function registerMobTextures(scene: Phaser.Scene) {
+  let created = 0;
+  let failed = 0;
   for (const mobId of STUDIO_MOB_IDS) {
-    registerTexture(scene, mobId, "side");
-    registerTexture(scene, mobId, "front");
-    registerTexture(scene, mobId, "back");
+    for (const direction of ["side", "front", "back"] as Direction[]) {
+      try {
+        const before = scene.textures.exists(`mob_${mobId}_${direction}`);
+        registerTexture(scene, mobId, direction);
+        const after = scene.textures.exists(`mob_${mobId}_${direction}`);
+        if (after && !before) created++;
+        else if (!after) {
+          failed++;
+          console.warn(`[MobTextures] NOT CREATED: mob_${mobId}_${direction}`);
+        }
+      } catch (e) {
+        failed++;
+        console.error(`[MobTextures] FAILED ${mobId}_${direction}:`, e);
+      }
+    }
   }
+  console.log(`[MobTextures] Created: ${created}, Failed: ${failed}, Total textures: ${scene.textures.getTextureKeys().filter((k) => k.startsWith("mob_")).length}`);
 }

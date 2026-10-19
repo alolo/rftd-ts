@@ -136,6 +136,7 @@ export class MainScene extends Phaser.Scene {
   public inputMenu!: InputMenuUI;
   public confirmDialog!: ConfirmDialog;
   public waveController!: WaveController;
+  public pathMask!: Phaser.Display.Masks.GeometryMask;
   private hotkeys!: HotkeysManager;
 
   public get isTyping(): boolean {
@@ -344,10 +345,24 @@ export class MainScene extends Phaser.Scene {
   }
 
   create() {
+    (window as any).mainScene = this; // чит для консоли на башни
     registerMobTextures(this);
-
     this.add.image(0, 0, "map_bg").setOrigin(0, 0);
     this.drawGrid();
+
+    // Маска пути: объединение всех клеток дороги.
+    // Используется для обрезки визуала зон урона (см. EnemyManager.createGroundZone).
+    const maskShape = this.make.graphics({ x: 0, y: 0 });
+    maskShape.fillStyle(0xffffff, 1);
+    for (const cell of BLOCKED_CELLS) {
+      maskShape.fillRect(
+        cell.col * this.CELL_SIZE,
+        cell.row * this.CELL_SIZE,
+        this.CELL_SIZE,
+        this.CELL_SIZE,
+      );
+    }
+    this.pathMask = maskShape.createGeometryMask();
 
     this.rangeCircle = this.add.graphics().setDepth(4).setVisible(false);
     this.abilityRangeCircle = this.add.graphics().setDepth(4).setVisible(false);

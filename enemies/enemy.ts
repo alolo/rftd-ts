@@ -17,12 +17,14 @@ export class Enemy {
   private slowTimer: Phaser.Time.TimerEvent | null = null;
   public activeSlowPct: number = 0;
   private poisonTimer: Phaser.Time.TimerEvent | null = null;
+  private burnTimer: Phaser.Time.TimerEvent | null = null;
   public isStunned: boolean = false;
   private stunTimer: Phaser.Time.TimerEvent | null = null;
 
   public isImmuneToSlow: boolean;
   public isBoss: boolean;
   public auraSlowPct: number = 0;
+  public isInPoisonZone: boolean = false;
   public displayName: string;
 
   private renderer!: EnemyRenderer;
@@ -109,6 +111,18 @@ export class Enemy {
     return chosen;
   }
 
+  public isSlowed(): boolean {
+    return this.activeSlowPct > 0 || this.auraSlowPct > 0;
+  }
+
+  public isPoisoned(): boolean {
+    return this.poisonTimer !== null;
+  }
+
+  public isBurning(): boolean {
+    return this.burnTimer !== null;
+  }
+
   public getBaseSpeed(): number {
     return this.baseSpeed;
   }
@@ -177,10 +191,12 @@ export class Enemy {
     this.updateHpDisplay(this.cellSize);
 
     this.container = scene.add.container(startX, startY, [
+      this.renderer.statusAura,
       this.renderer.sprite,
       this.renderer.hpBar,
       this.renderer.hpText,
       this.renderer.stunIcon,
+      this.renderer.statusParticles,
     ]);
     this.container.setDepth(18);
     this.container.setSize(cellSize, cellSize);
@@ -241,6 +257,15 @@ export class Enemy {
 
   public update(delta: number, cellSize: number) {
     if (this.isDead || this.pathIndex >= this.path.length) return;
+
+    // Визуальные эффекты статусов — рисуем ДО проверки isStunned,
+    // чтобы пузырьки/огоньки продолжали лететь даже в стане.
+    this.renderer.updateStatusEffects(delta, cellSize, {
+      slow: this.isSlowed(),
+      poison: this.isPoisoned() || this.isInPoisonZone,
+      burn: this.isBurning(),
+    });
+
     if (this.isStunned) return;
 
     this.container.setDepth(18 + this.container.y * 0.001);
@@ -294,6 +319,7 @@ export class Enemy {
 
     if (this.slowTimer) this.slowTimer.remove(false);
     if (this.poisonTimer) this.poisonTimer.remove(false);
+    if (this.burnTimer) this.burnTimer.remove(false);
     if (this.stunTimer) this.stunTimer.remove(false);
 
     // ИСПРАВЛЕНО: container владеет всеми объектами рендерера,
@@ -348,6 +374,25 @@ export class Enemy {
       callback: () => {
         if (!this.isDead) {
           this.takeDamage(damagePerSec);
+        }
+      },
+    });
+  }
+
+  public applyBurn(durationMs: number) {
+    if (this.isDead) return;
+
+    // Как и с slow — повторный burn продлевает таймер,
+    // а не создаёт второй параллельный.
+    if (this.burnTimer) {
+      this.burnTimer.remove(false);
+    }
+
+    this.burnTimer = this.scene.time.addEvent({
+      delay: durationMs,
+      callback: () => {
+        if (!this.isDead) {
+          this.burnTimer = null;
         }
       },
     });

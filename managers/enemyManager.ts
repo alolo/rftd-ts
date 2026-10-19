@@ -18,8 +18,12 @@ export class EnemyManager {
     dmgPerSec: number;
     slowPct: number;
     visual: Phaser.GameObjects.Graphics;
+    overlay: Phaser.GameObjects.Graphics;
     damageType: number;
     isBlackHole: boolean;
+    color: number;
+    zoneType: "fire" | "poison" | "slow" | "other";
+    particleTime: number;
   }[] = [];
 
   constructor(scene: MainScene) {
@@ -71,6 +75,14 @@ export class EnemyManager {
     visual.fillStyle(color, 0.4);
     visual.fillCircle(x, y, radius);
     visual.setDepth(4);
+    visual.setMask(this.scene.pathMask);
+
+    const overlay = this.scene.add.graphics();
+    overlay.setDepth(5);
+    overlay.setMask(this.scene.pathMask);
+
+    const zoneType = this.classifyZoneColor(color, isBlackHole);
+
     this.groundZones.push({
       x,
       y,
@@ -79,9 +91,26 @@ export class EnemyManager {
       dmgPerSec,
       slowPct,
       visual,
+      overlay,
       damageType,
       isBlackHole,
+      color,
+      zoneType,
+      particleTime: 0,
     });
+  }
+
+  private classifyZoneColor(
+    color: number,
+    isBlackHole: boolean,
+  ): "fire" | "poison" | "slow" | "other" {
+    // Ифрит (6-14) и Врата боли (6-3)
+    if (color === 0xff4400 || color === 0x8b0000) return "fire";
+    // Статуя бога Яда (6-21)
+    if (color === 0x00ff33) return "poison";
+    // Чёрная дыра (6-17)
+    if (isBlackHole || color === 0x220033) return "slow";
+    return "other";
   }
 
   private handleEnemyReachedEnd(enemy: Enemy) {
@@ -119,8 +148,11 @@ export class EnemyManager {
   }
 
   public update(time: number, delta: number) {
-    // 1. АУРЫ ЗАМЕДЛЕНИЯ ОТ БАШЕН
-    for (const enemy of this.enemies) enemy.auraSlowPct = 0;
+    // 1. АУРЫ ЗАМЕДЛЕНИЯ ОТ БАШЕН + сброс визуальных флагов зон
+    for (const enemy of this.enemies) {
+      enemy.auraSlowPct = 0;
+      enemy.isInPoisonZone = false;
+    }
 
     for (const tower of this.scene.builder.activeTowers) {
       if (tower.auraEnemySlowRadius > 0) {
@@ -145,9 +177,17 @@ export class EnemyManager {
 
       if (zone.duration <= 0) {
         zone.visual.destroy();
+        zone.overlay.destroy();
         this.groundZones.splice(i, 1);
         continue;
       }
+
+      // Анимация частиц на поверхности зоны
+      zone.particleTime += delta;
+      zone.overlay.clear();
+      if (zone.zoneType === "fire") this.drawFireOverlay(zone);
+      else if (zone.zoneType === "poison") this.drawPoisonOverlay(zone);
+      else if (zone.zoneType === "slow") this.drawSlowOverlay(zone);
 
       for (const enemy of this.enemies) {
         if (enemy.isDead) continue;
@@ -158,6 +198,12 @@ export class EnemyManager {
         if (dist <= zone.radius) {
           if (zone.dmgPerSec > 0)
             enemy.takeDamage(zone.dmgPerSec * (delta / 1000), zone.damageType);
+
+          if (zone.zoneType === "fire") {
+            enemy.applyBurn(400);
+          } else if (zone.zoneType === "poison") {
+            enemy.isInPoisonZone = true;
+          }
 
           if (zone.slowPct > 0 && !enemy.isImmuneToSlow) {
             let currentSlow = zone.slowPct;
@@ -190,6 +236,87 @@ export class EnemyManager {
       const m = this.mines[i];
       m.update(this.enemies);
       if (m.isDead) this.mines.splice(i, 1);
+    }
+  }
+    private drawFireOverlay(zone: {
+    x: number;
+    y: number;
+    radius: number;
+    overlay: Phaser.GameObjects.Graphics;
+    particleTime: number;
+  }) {
+    const t = zone.particleTime * 0.001;
+    for (let i = 0; i < 10; i++) {
+      const phase = (t * 1.2 + i / 10) % 1;
+      const angle = i * 2.399 + phase * 2;
+      const dist = (i / 10) * zone.radius * 0.85;
+      const px = zone.x + Math.cos(angle) * dist;
+      const py = zone.y + Math.sin(angle) * dist * 0.6 - phase * 25;
+      const alpha = (1 - phase) * 0.9;
+      // Внешний ореол
+      zone.overlay.fillStyle(0xff4400, alpha * 0.6);
+      zone.overlay.fillCircle(px, py, 3 + (1 - phase) * 2);
+      // Ядро пламени
+      zone.overlay.fillStyle(0xffdd44, alpha);
+      zone.overlay.fillCircle(px, py, 1.5);
+    }
+    // Угольки, тлеющие на земле
+    for (let i = 0; i < 4; i++) {
+      const phase = (t * 0.6 + i / 4) % 1;
+      const angle = i * 1.57 + t * 0.5;
+      const dist = zone.radius * 0.7 * ((i * 0.37 + phase) % 1);
+      const px = zone.x + Math.cos(angle) * dist;
+      const py = zone.y + Math.sin(angle) * dist * 0.5;
+      zone.overlay.fillStyle(0xffaa00, (1 - phase) * 0.5);
+      zone.overlay.fillCircle(px, py, 2);
+    }
+  }
+
+  private drawPoisonOverlay(zone: {
+    x: number;
+    y: number;
+    radius: number;
+    overlay: Phaser.GameObjects.Graphics;
+    particleTime: number;
+  }) {
+    const t = zone.particleTime * 0.001;
+    for (let i = 0; i < 8; i++) {
+      const phase = (t * 0.5 + i / 8) % 1;
+      const angle = i * 2.399 + phase * 1.5;
+      const dist = (i / 8) * zone.radius * 0.8;
+      const px = zone.x + Math.cos(angle) * dist;
+      const py = zone.y + Math.sin(angle) * dist * 0.5 - phase * 20;
+      const alpha = (1 - phase) * 0.85;
+      // Пузырь
+      zone.overlay.fillStyle(0x44cc44, alpha * 0.4);
+      zone.overlay.fillCircle(px, py, 4 + (1 - phase) * 3);
+      // Ядро пузыря
+      zone.overlay.fillStyle(0x88ff88, alpha);
+      zone.overlay.fillCircle(px, py, 2 + (1 - phase) * 1.5);
+      // Блик
+      zone.overlay.fillStyle(0xccffcc, alpha);
+      zone.overlay.fillCircle(px - 1, py - 1, 0.8);
+    }
+  }
+
+  private drawSlowOverlay(zone: {
+    x: number;
+    y: number;
+    radius: number;
+    overlay: Phaser.GameObjects.Graphics;
+    particleTime: number;
+  }) {
+    const t = zone.particleTime * 0.001;
+    for (let i = 0; i < 6; i++) {
+      const phase = (t * 0.4 + i / 6) % 1;
+      const angle = i * 1.57 + t * 2;
+      const dist = zone.radius * phase * 0.9;
+      const px = zone.x + Math.cos(angle) * dist;
+      const py = zone.y + Math.sin(angle) * dist * 0.5;
+      zone.overlay.fillStyle(0xaa44ff, (1 - phase) * 0.7);
+      zone.overlay.fillCircle(px, py, 2);
+      zone.overlay.fillStyle(0xdd88ff, (1 - phase) * 0.4);
+      zone.overlay.fillCircle(px, py, 4);
     }
   }
 }
