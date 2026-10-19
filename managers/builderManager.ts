@@ -1,8 +1,8 @@
 import * as Phaser from "phaser";
-import type { MainScene } from "./main";
-import { Tower } from "./tower";
-import { Crop } from "./Crop";
-import type { CropType } from "./economy";
+import type { MainScene } from "../main";
+import { Tower } from "../tower";
+import { Crop } from "../Crop";
+import type { CropType } from "../economy";
 
 export class BuilderManager {
   public scene: MainScene;

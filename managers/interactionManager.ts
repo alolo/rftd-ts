@@ -152,45 +152,7 @@ export class InteractionManager {
 
       // ИСПРАВЛЕНО: автосужение типов TypeScript без ручных кастов "as"
       if (currentTower instanceof Crop) {
-        const cropNames: Record<string, string> = {
-          potato: "🥔 Картофель",
-          onion: "🧅 Лук",
-          pineapple: "🍍 Ананас",
-        };
-
-        const cropTypeMap: Record<string, string> = {
-          potato: "potato",
-          onion: "onion",
-          pineapple: "pineapple",
-        };
-
-        const displayName = cropNames[currentTower.type] || "Грядка";
-        const wavesLeft = Math.max(0, 2 - currentTower.wavesAlive);
-
-        this.scene.towerTitleText.setText(displayName);
-        this.scene.towerInfoText.setText(
-          `🌱 Созревание\nОсталось волн: ${wavesLeft}`,
-        );
-
-        // Показать иконку овоща в рамке
-        this.scene.towerIconGroup.setVisible(true);
-        const cropKey = cropTypeMap[currentTower.type] || "potato";
-        if (this.scene.textures.exists(cropKey)) {
-          this.scene.towerIconImage.setTexture(cropKey);
-          const frame = this.scene.textures.getFrame(cropKey);
-          if (frame) {
-            const maxDim = Math.max(frame.width, frame.height);
-            this.scene.towerIconImage.setScale(110 / maxDim);
-          }
-        }
-
-        this.scene.targetModeBtnText.setVisible(false);
-        this.scene.btnRandomMerge.setVisible(false);
-        this.scene.btnTargetMerge.setVisible(false);
-        this.scene.btnSell.setVisible(false);
-        if (this.scene.btnReroll) this.scene.btnReroll.setVisible(false);
-        this.scene.abilityIcon.setVisible(false);
-        this.scene.abilityTooltip.setVisible(false);
+        this.scene.sidePanel.showCrop(currentTower);
       } else if (currentTower instanceof Tower) {
         this.scene.rangeCircle.clear();
         this.scene.rangeCircle.lineStyle(2, 0xffffff, 0.3);

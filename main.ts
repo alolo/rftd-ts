@@ -1,10 +1,8 @@
 import * as Phaser from "phaser";
 import "./style.css";
-import { Tower, TOWER_DICTIONARY } from "./tower";
 import { Enemy } from "./enemies/enemy";
 import { WaveManager } from "./waves";
 import { EconomyManager } from "./economy";
-import type { CropType } from "./economy";
 import { Crop } from "./Crop";
 import { Inventory } from "./inventory";
 import { Market } from "./market";
@@ -18,12 +16,14 @@ import { PauseMenu } from "./pauseMenu";
 import { HowToPlayMenu } from "./howToPlayMenu";
 import { BugReportMenu } from "./bugReportMenu";
 import { InteractionManager } from "./managers/interactionManager";
-import { BuilderManager } from "./builderManager";
+import { BuilderManager } from "./managers/builderManager";
 import { EnemyManager } from "./managers/enemyManager";
 import { Informer } from "./informer";
 import { registerMobTextures } from "./enemies/mobGenerator/MobTextures";
 import { RadialMenu } from "./radialMenu";
 import { attachTooltip, hideTooltip } from "./tooltip";
+import { TopBarUI } from "./ui/TopBarUI";
+import { SidePanelUI } from "./ui/SidePanelUI";
 
 const originalAddText = Phaser.GameObjects.GameObjectFactory.prototype.text;
 
@@ -44,97 +44,6 @@ Phaser.GameObjects.GameObjectFactory.prototype.text = function (
   const finalStyle = style ? { ...defaultStyle, ...style } : defaultStyle;
   return originalAddText.call(this, x, y, text, finalStyle);
 };
-
-class ActionButton {
-  public readonly container: Phaser.GameObjects.Container;
-  private label: Phaser.GameObjects.Text;
-
-  constructor(
-    scene: Phaser.Scene,
-    centerX: number,
-    centerY: number,
-    width: number,
-    height: number,
-    frame: string,
-    text: string,
-    onClick: () => void,
-  ) {
-    const corner = 30;
-    const img = scene.add.nineslice(
-      0,
-      0,
-      "ui",
-      frame,
-      width,
-      height,
-      corner,
-      corner,
-      corner,
-      corner,
-    );
-
-    this.label = scene.add
-      .text(0, 0, text, {
-        fontSize: "14px",
-        color: "#ffffff",
-        fontStyle: "bold",
-        stroke: "#000000",
-        strokeThickness: 3,
-        align: "center",
-      })
-      .setOrigin(0.5);
-
-    this.container = scene.add.container(centerX, centerY, [img, this.label]);
-
-    img
-      .setInteractive({ useHandCursor: true })
-      .on(
-        "pointerdown",
-        (
-          pointer: Phaser.Input.Pointer,
-          lx: number,
-          ly: number,
-          event: Phaser.Types.Input.EventData,
-        ) => {
-          event.stopPropagation();
-          scene.tweens.add({
-            targets: this.container,
-            scale: 0.93,
-            duration: 60,
-            yoyo: true,
-            onComplete: () => onClick(),
-          });
-        },
-      )
-      .on("pointerover", () => img.setTint(0xcccccc))
-      .on("pointerout", () => img.clearTint());
-  }
-
-  public setText(text: string): this {
-    this.label.setText(text);
-    return this;
-  }
-
-  public get visible(): boolean {
-    return this.container.visible;
-  }
-
-  public setVisible(visible: boolean): this {
-    this.container.setVisible(visible);
-    return this;
-  }
-
-  public setOrigin(_x?: number, _y?: number): this {
-    // No-op: кнопка всегда позиционируется по центру.
-    // Оставлен для совместимости со старым кодом.
-    return this;
-  }
-
-  public setDepth(depth: number): this {
-    this.container.setDepth(depth);
-    return this;
-  }
-}
 
 export class MainScene extends Phaser.Scene {
   public readonly CELL_SIZE = 64;
@@ -384,54 +293,47 @@ export class MainScene extends Phaser.Scene {
   public pauseMenu!: PauseMenu;
   public howToPlayMenu!: HowToPlayMenu;
   public bugReportMenu!: BugReportMenu;
-  private achievementsBtnObj!: Phaser.GameObjects.Text;
-  private achievementsDot!: Phaser.GameObjects.Container;
-  private achievementsDotCircle!: Phaser.GameObjects.Arc;
 
   private waveInfoText!: Phaser.GameObjects.Text;
   private skipTimerBtn!: Phaser.GameObjects.Text;
-  private marketPriceTexts: {
-    potato?: Phaser.GameObjects.Text;
-    onion?: Phaser.GameObjects.Text;
-    pineapple?: Phaser.GameObjects.Text;
-  } = {};
   public marketAura!: Phaser.GameObjects.Graphics;
   public radialMenu!: RadialMenu;
 
-  public sideMenuContainer!: Phaser.GameObjects.Container;
+    // --- НОВЫЕ UI-МЕНЕДЖЕРЫ ---
+  public topBar!: TopBarUI;
+  public sidePanel!: SidePanelUI;
 
-  public abilityLabelText!: Phaser.GameObjects.Text;
-  public towerIconGroup!: Phaser.GameObjects.Container;
-  public towerIconImage!: Phaser.GameObjects.Sprite;
-  public towerIconFrame!: Phaser.GameObjects.Image;
-  public towerTitleText!: Phaser.GameObjects.Text;
-  public towerInfoText!: Phaser.GameObjects.Text;
-  public targetModeBtnText!: ActionButton;
-  public btnRandomMerge!: ActionButton;
-  public btnTargetMerge!: ActionButton;
-  public btnSell!: ActionButton;
-  public btnReroll!: ActionButton;
-  public multiSelectText!: Phaser.GameObjects.Text;
-
-  public abilityIcon!: Phaser.GameObjects.Container;
-  public abilityTooltip!: Phaser.GameObjects.Text;
+  // Полевые объекты (не UI-панель)
   public rangeCircle!: Phaser.GameObjects.Graphics;
   public abilityRangeCircle!: Phaser.GameObjects.Graphics;
 
   private gameOverMenuContainer!: Phaser.GameObjects.Container;
-  public goldText!: Phaser.GameObjects.Text;
-  public medalsText!: Phaser.GameObjects.Text;
-  public woodText!: Phaser.GameObjects.Text;
-  private playerLivesText!: Phaser.GameObjects.Text;
-  public burgerBtn!: Phaser.GameObjects.Image;
-  private burgerIsOpen = false;
-  private burgerHoverScale = 1;
-  private burgerPopupTimer: Phaser.Time.TimerEvent | null = null;
+
+  // --- ГЕТТЕРЫ для обратной совместимости с внешними классами ---
+  public get goldText() { return this.topBar.goldText; }
+  public get woodText() { return this.topBar.woodText; }
+  public get medalsText() { return this.topBar.medalsText; }
+  public get playerLivesText() { return this.topBar.playerLivesText; }
+  public get burgerBtn() { return this.topBar.burgerBtn; }
+  public get marketPopupContainer() { return this.topBar.marketPopupContainer; }
+  public get achievementsDot() { return this.topBar.achievementsDot; }
+  public get sideMenuContainer() { return this.sidePanel.container; }
+  public get towerIconGroup() { return this.sidePanel.towerIconGroup; }
+  public get towerIconImage() { return this.sidePanel.towerIconImage; }
+  public get towerTitleText() { return this.sidePanel.towerTitleText; }
+  public get towerInfoText() { return this.sidePanel.towerInfoText; }
+  public get multiSelectText() { return this.sidePanel.multiSelectText; }
+  public get targetModeBtnText() { return this.sidePanel.targetModeBtnText; }
+  public get btnSell() { return this.sidePanel.btnSell; }
+  public get btnRandomMerge() { return this.sidePanel.btnRandomMerge; }
+  public get btnTargetMerge() { return this.sidePanel.btnTargetMerge; }
+  public get btnReroll() { return this.sidePanel.btnReroll; }
+  public get abilityIcon() { return this.sidePanel.abilityIcon; }
+  public get abilityTooltip() { return this.sidePanel.abilityTooltip; }
 
   public gameSpeed: number = 1;
   private gameTime: number = 0;
   public speedBtn!: Phaser.GameObjects.Container;
-  private speedText!: Phaser.GameObjects.Text;
 
   private difficultyMultiplier: number = 1.0;
   private currentDifficultyLevel: Difficulty = "easy";
@@ -455,7 +357,6 @@ export class MainScene extends Phaser.Scene {
   private currentInputText: string = "";
   private maxInputLength: number = 16;
   private onInputConfirm: ((text: string) => void) | null = null;
-  public marketPopupContainer!: Phaser.GameObjects.Container;
 
   // Состояние
   public playerLives: number = 20;
@@ -858,9 +759,9 @@ export class MainScene extends Phaser.Scene {
       this.cycleGameSpeed();
     });
     this.input.keyboard?.on("keydown-T", () => {
-      if (!this.canUseHotkeys()) return;
-      this.toggleBurgerPopup();
-    });
+  if (!this.canUseHotkeys()) return;
+  this.topBar?.toggleBurgerPopup();
+});
     this.input.keyboard?.on("keydown-J", () => {
       if (!this.canUseHotkeys()) return;
       if (this.achievementsMenuContainer.visible) {
@@ -895,7 +796,7 @@ export class MainScene extends Phaser.Scene {
         this.interaction.selectedInformerTower &&
         this.sideMenuContainer.visible
       ) {
-        this.closeSideMenu();
+        this.sidePanel.close();
         return;
       }
 
@@ -1004,11 +905,13 @@ export class MainScene extends Phaser.Scene {
       this.showNotification(msg);
     });
 
-    this.createSideMenu();
-    this.createUI();
     this.cols = Math.floor(this.scale.width / this.CELL_SIZE);
     this.rows = Math.floor(this.scale.height / this.CELL_SIZE);
     this.interaction = new InteractionManager(this);
+    this.sidePanel = new SidePanelUI(this);
+    this.sidePanel.create();
+    this.topBar = new TopBarUI(this);
+    this.topBar.create();
     this.mainMenu = new MainMenu(this);
     this.market = new Market(this);
     this.luckyTicket = new LuckyTicket(this);
@@ -1229,55 +1132,12 @@ export class MainScene extends Phaser.Scene {
     return container;
   }
 
-  public updateMarketUI() {
-    const p = this.economy.marketPrices;
-
-    const getStr = (type: CropType, name: string) => {
-      const dynamicBase = this.economy.getDynamicBasePrice(type);
-      const minPrice = Math.floor(dynamicBase * 0.8);
-      const maxPrice = Math.floor(dynamicBase * 1.5);
-      const currentPrice = p[type];
-      const pct = Math.round((currentPrice / dynamicBase) * 100);
-      const count = this.inventory ? this.inventory.getItemCount(type) : 0;
-
-      const plantedCount = this.economy.cropsPlanted[type] || 0;
-      let level = 0;
-      const thresholds = [15, 30, 45, 60, 75, 90];
-      for (const t of thresholds) {
-        if (plantedCount >= t) level++;
-      }
-
-      return `${name} [${level}ур] ${currentPrice}g (${minPrice}~${maxPrice}g, ${pct}%) - ${count} шт`;
-    };
-
-    this.marketPriceTexts.potato?.setText(getStr("potato", "Картошка"));
-    this.marketPriceTexts.onion?.setText(getStr("onion", "Лук"));
-    this.marketPriceTexts.pineapple?.setText(getStr("pineapple", "Ананас"));
-  }
-
   public isPath(col: number, row: number): boolean {
     const onPath = this.enemyPath.some((p) => p.col === col && p.row === row);
     const isBlocked = this.blockedCells.some(
       (p) => p.col === col && p.row === row,
     );
     return onPath || isBlocked;
-  }
-
-  private drawDashedCircle(
-    graphics: Phaser.GameObjects.Graphics,
-    x: number,
-    y: number,
-    radius: number,
-  ) {
-    graphics.clear();
-    graphics.lineStyle(2, 0xffffff, 0.8);
-    const dashes = 32;
-    const angleStep = (Math.PI * 2) / dashes;
-    for (let i = 0; i < dashes; i += 2) {
-      graphics.beginPath();
-      graphics.arc(x, y, radius, i * angleStep, (i + 1) * angleStep, false);
-      graphics.strokePath();
-    }
   }
 
   private createInputMenu() {
@@ -2387,886 +2247,51 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
-  public updateSideMenuRealtime() {
-    if (!this.sideMenuContainer.visible) return;
-
-    if (this.selectedEnemy) {
-      this.updateEnemyUI();
-      return;
-    }
-
-    if (this.interaction.selectedInformerTower) {
-      this.updateInformerUI();
-      return;
-    }
-
-    if (this.interaction.selectedCoords) {
-      const cell =
-        this.builder.grid[this.interaction.selectedCoords.row][
-          this.interaction.selectedCoords.col
-        ];
-      if (cell instanceof Tower) {
-        this.updateTowerCard(cell);
-      }
-    }
-  }
-
-  public closeSideMenu() {
-    // Если открыта энциклопедия — прячем только панель, не трогаем саму энциклопедию
-    if (this.interaction.selectedInformerTower) {
-      this.sideMenuContainer.setVisible(false);
-      this.interaction.selectedInformerTower = null;
-      this.rangeCircle.setVisible(false);
-      this.abilityRangeCircle.setVisible(false);
-      return;
-    }
-
-    // Иначе — обычное поведение (снимаем выделение с башни)
-    this.interaction.deselectTower();
-  }
-
-  private centerSideMenuText() {
-    const gap = 10;
-    const hasTitle = this.towerTitleText.text.length > 0;
-
-    const titleH = hasTitle ? this.towerTitleText.height : 0;
-    const infoH = this.towerInfoText.height;
-    const totalH = titleH + (hasTitle ? gap : 0) + infoH;
-    const startY = -totalH / 2;
-
-    if (hasTitle) {
-      this.towerTitleText.setY(startY);
-      this.towerInfoText.setY(startY + titleH + gap);
-    } else {
-      this.towerInfoText.setY(startY);
-    }
-  }
-
-  private updateTowerCard(tower: Tower) {
-    // Иконка
-    this.towerIconGroup.setVisible(true);
-    this.towerIconImage.anims.stop();
-    const textureName = `${tower.level}_${tower.variant}`;
-    if (this.textures.exists("towers")) {
-      this.towerIconImage.setTexture("towers", textureName);
-      const frame = this.textures.getFrame("towers", textureName);
-      if (frame) {
-        const maxDim = Math.max(frame.width, frame.height);
-        this.towerIconImage.setScale(120 / maxDim);
-      }
-    }
-
-    // Большой заголовок (имя + уровень) — как в энциклопедии
-    this.towerTitleText.setText(
-      `${tower.towerName.toUpperCase()}\nУР. ${tower.level}`,
-    );
-
-    // Характеристики (в точности как на скриншоте)
-    const dmgStr = tower.getDamageDisplay();
-    const fireRateSec = (tower.getFireRate() / 1000).toFixed(2);
-    const dmgTypeName = Tower.DAMAGE_TYPES[tower.damageType] || "Обычный";
-
-    this.towerInfoText.setText(
-      `Урон: ${dmgStr}\n` +
-        `Тип: ${dmgTypeName}\n` +
-        `Дальность: ${tower.getRange()}\n` +
-        `Скор. атаки: ${fireRateSec}с`,
-    );
-
-    this.centerSideMenuText();
-
-    // Кнопки
-    this.targetModeBtnText.setVisible(true);
-    this.btnRandomMerge.setVisible(true);
-    this.btnTargetMerge.setVisible(true);
-    this.btnSell.setVisible(true);
-    this.btnReroll.setVisible(
-      tower.level === 6 && this.inventory.getItemCount("reroll") > 0,
-    );
-
-    // Умение
-    if (tower.specialDesc) {
-      this.abilityIcon.setVisible(true);
-      this.abilityLabelText.setText("СПОСОБНОСТЬ (наведи)");
-      this.abilityLabelText.setColor("#ffd700");
-      this.abilityTooltip.setText(tower.specialDesc);
-    } else {
-      this.abilityIcon.setVisible(true);
-      this.abilityLabelText.setText("НЕТ СПОСОБНОСТИ");
-      this.abilityLabelText.setColor("#ffffff");
-      this.abilityTooltip.setText("У этой башни нет особых способностей");
-    }
-  }
-
-  private createSideMenu() {
-    const panelWidth = 1200;
-    const panelHeight = 300;
-    const centerX = this.scale.width / 2;
-    const centerY = this.scale.height - panelHeight / 2 - 20;
-
-    this.sideMenuContainer = this.add
-      .container(centerX, centerY)
-      .setVisible(false)
-      .setDepth(50);
-
-    // Полупрозрачная панель из ui-3.1
-    const panel = this.add.nineslice(
-      0,
-      0,
-      "ui_v2",
-      "panelClear",
-      panelWidth,
-      panelHeight,
-      40,
-      40,
-      40,
-      40,
-    );
-    this.sideMenuContainer.add(panel);
-
-    // Блокер кликов
-    const blocker = this.add
-      .zone(0, 0, panelWidth, panelHeight)
-      .setInteractive()
-      .on(
-        "pointerdown",
-        (
-          _p: Phaser.Input.Pointer,
-          _lx: number,
-          _ly: number,
-          e: Phaser.Types.Input.EventData,
-        ) => e.stopPropagation(),
-      );
-    this.sideMenuContainer.add(blocker);
-
-    // ================================================================
-    // ЛЕВЫЙ БЛОК: ИКОНКА + ИНФОРМАЦИЯ
-    // ================================================================
-    const iconX = -panelWidth / 2 + 40 + 70; // -590
-    const iconSize = 140;
-
-    this.towerIconGroup = this.add.container(iconX, 0);
-    this.sideMenuContainer.add(this.towerIconGroup);
-
-    // Рамка — деревянная кнопка из ui-3.1
-    this.towerIconFrame = this.add.image(0, 0, "ui_v2", "woodButtonClear");
-    this.towerIconFrame.setDisplaySize(iconSize, iconSize);
-    this.towerIconGroup.add(this.towerIconFrame);
-
-    // Сама иконка (обновляется динамически)
-    this.towerIconImage = this.add.sprite(0, 0, "towers", "1_1");
-    const initialFrame = this.textures.getFrame("towers", "1_1");
-    if (initialFrame) {
-      const maxDim = Math.max(initialFrame.width, initialFrame.height);
-      this.towerIconImage.setScale(110 / maxDim);
-    }
-    this.towerIconGroup.add(this.towerIconImage);
-
-    // Текстовая колонка
-    const textX = -panelWidth / 2 + 40 + iconSize + 30; // -390
-    const textWidth = 420;
-
-    this.towerTitleText = this.add
-      .text(textX, -100, "", {
-        fontSize: "24px",
-        color: "#ffffff",
-        fontStyle: "bold",
-        stroke: "#000000",
-        strokeThickness: 4,
-        lineSpacing: 6,
-      })
-      .setOrigin(0, 0);
-    this.sideMenuContainer.add(this.towerTitleText);
-
-    this.towerInfoText = this.add
-      .text(textX, -30, "", {
-        fontSize: "22px",
-        color: "#fff5ea",
-        fontStyle: "bold",
-        stroke: "#000000",
-        strokeThickness: 3,
-        lineSpacing: 5,
-        wordWrap: { width: textWidth, useAdvancedWrap: true },
-      })
-      .setOrigin(0, 0);
-    this.sideMenuContainer.add(this.towerInfoText);
-
-    this.multiSelectText = this.add
-      .text(textX, 125, "", {
-        fontSize: "15px",
-        color: "#00ffff",
-        fontStyle: "bold",
-        stroke: "#000000",
-        strokeThickness: 2,
-      })
-      .setOrigin(0, 0);
-    this.sideMenuContainer.add(this.multiSelectText);
-
-    // ================================================================
-    // ПРАВЫЙ БЛОК: СЕТКА КНОПОК 2 × 3
-    // ================================================================
-    const btnW = 280;
-    const btnH = 56;
-    const btnGapX = 10;
-    const btnGapY = 10;
-
-    const totalBtnW = btnW * 2 + btnGapX; // 570
-    const btnStartX = panelWidth / 2 - 30 - totalBtnW; // 100
-
-    const col0X = btnStartX + btnW / 2; // 240
-    const col1X = btnStartX + btnW + btnGapX + btnW / 2; // 530
-
-    const row0Y = -66;
-    const row1Y = 0;
-    const row2Y = 66;
-
-    // --- Кнопка Умение (новая позиция: col0, row0) ---
-    const abilityBg = this.add.nineslice(
-      0,
-      0,
-      "ui",
-      "button_brown.png",
-      btnW,
-      btnH,
-      30,
-      30,
-      30,
-      30,
-    );
-
-    this.abilityLabelText = this.add
-      .text(0, 0, "✨ УМЕНИЕ (наведи)", {
-        fontSize: "16px",
-        color: "#ffd700",
-        fontStyle: "bold",
-        stroke: "#000000",
-        strokeThickness: 3,
-      })
-      .setOrigin(0.5);
-
-    this.abilityIcon = this.add.container(col0X, row0Y, [
-      abilityBg,
-      this.abilityLabelText,
-    ]);
-    this.abilityIcon.setSize(btnW, btnH);
-    this.abilityIcon.setInteractive({ useHandCursor: true });
-    this.abilityIcon.setVisible(false);
-
-    this.abilityTooltip = this.add
-      .text(0, 0, "", {
-        fontSize: "14px",
-        color: "#ffffff",
-        backgroundColor: "#111111",
-        padding: { x: 10, y: 8 },
-        wordWrap: { width: 340 },
-      })
-      .setOrigin(0.5, 1)
-      .setDepth(100)
-      .setVisible(false);
-
-    this.abilityIcon.on("pointerover", () => {
-      this.abilityTooltip.setPosition(col0X, row0Y - btnH / 2 - 8);
-      this.abilityTooltip.setVisible(true);
-      if (this.interaction.selectedCoords) {
-        const tower =
-          this.builder.grid[this.interaction.selectedCoords.row][
-            this.interaction.selectedCoords.col
-          ];
-        if (tower instanceof Tower) {
-          let abilityRadius = 0;
-          if (tower.auraRadius > 0) abilityRadius = tower.auraRadius;
-          else if (tower.auraEnemySlowRadius > 0)
-            abilityRadius = tower.auraEnemySlowRadius;
-          else if (tower.stunRadius > 0) abilityRadius = tower.stunRadius;
-          else if (tower.splashRadius > 0) abilityRadius = tower.splashRadius;
-          else if (tower.zoneRadius > 0) abilityRadius = tower.zoneRadius;
-          else if (tower.pulseRadius > 0) abilityRadius = tower.pulseRadius;
-          else if (tower.randomTargetRange > 0)
-            abilityRadius = tower.randomTargetRange;
-          else if (tower.mineRadius > 0) abilityRadius = tower.mineRadius;
-
-          if (abilityRadius > 0) {
-            this.drawDashedCircle(
-              this.abilityRangeCircle,
-              tower.centerX,
-              tower.centerY,
-              abilityRadius,
-            );
-            this.abilityRangeCircle.setVisible(true);
-          } else if (tower.waveLength > 0) {
-            this.abilityRangeCircle.clear();
-            this.abilityRangeCircle.fillStyle(0x00ffff, 0.2);
-            this.abilityRangeCircle.fillRect(
-              tower.centerX,
-              tower.centerY - tower.waveWidth / 2,
-              tower.waveLength,
-              tower.waveWidth,
-            );
-            this.abilityRangeCircle.lineStyle(2, 0x00ffff, 0.8);
-            this.abilityRangeCircle.strokeRect(
-              tower.centerX,
-              tower.centerY - tower.waveWidth / 2,
-              tower.waveLength,
-              tower.waveWidth,
-            );
-            this.abilityRangeCircle.setVisible(true);
-          }
-        }
-      }
-    });
-
-    this.abilityIcon.on("pointerout", () => {
-      this.abilityTooltip.setVisible(false);
-      this.abilityRangeCircle.setVisible(false);
-    });
-
-    // --- Кнопка Продать (новая позиция: col0, row1) ---
-    this.btnSell = new ActionButton(
-      this,
-      col0X,
-      row1Y,
-      btnW,
-      btnH,
-      "button_red.png",
-      "ПРОДАТЬ [S]",
-      () => {
-        if (this.interaction.selectedCoords)
-          this.builder.sellTower(
-            this.interaction.selectedCoords.col,
-            this.interaction.selectedCoords.row,
-          );
-      },
-    );
-
-    // --- Кнопка Цель (позиция без изменений: col0, row2) ---
-    this.targetModeBtnText = new ActionButton(
-      this,
-      col0X,
-      row2Y,
-      btnW,
-      btnH,
-      "button_brown.png",
-      "ЦЕЛЬ: ПЕРВЫЙ [Q]",
-      () => this.interaction.cycleTargetMode(),
-    );
-
-    // --- Кнопка Слияние Выбор (col1, row0) ---
-    this.btnTargetMerge = new ActionButton(
-      this,
-      col1X,
-      row0Y,
-      btnW,
-      btnH,
-      "button_brown.png",
-      "СЛИЯНИЕ [E]",
-      () => this.interaction.startTargetedMerge(),
-    );
-
-    // --- Кнопка Слияние Случ (col1, row1) ---
-    this.btnRandomMerge = new ActionButton(
-      this,
-      col1X,
-      row1Y,
-      btnW,
-      btnH,
-      "button_brown.png",
-      "СЛИЯНИЕ СЛУЧ [W]",
-      () => this.interaction.doRandomMerge(),
-    );
-
-    // --- Кнопка Заменить (новая позиция: col1, row2) ---
-    this.btnReroll = new ActionButton(
-      this,
-      col1X,
-      row2Y,
-      btnW,
-      btnH,
-      "button_brown.png",
-      "ЗАМЕНИТЬ [R]",
-      () => {
-        if (this.interaction.selectedCoords)
-          this.builder.rerollTower(
-            this.interaction.selectedCoords.col,
-            this.interaction.selectedCoords.row,
-          );
-      },
-    );
-
-    this.sideMenuContainer.add([
-      this.targetModeBtnText.container,
-      this.btnRandomMerge.container,
-      this.btnTargetMerge.container,
-      this.btnSell.container,
-      this.btnReroll.container,
-      this.abilityIcon,
-      this.abilityTooltip,
-    ]);
-
-    // Крестик закрытия — вылазит за пределы панели
-    const CLOSE_SIZE = 40; // размер кнопки
-    const CLOSE_OFFSET = 12; // на сколько вылезает за панель
-
-    const closeBtn = this.add
-      .image(
-        panelWidth / 2 - CLOSE_SIZE / 2 + CLOSE_OFFSET,
-        -panelHeight / 2 + CLOSE_SIZE / 2 - CLOSE_OFFSET,
-        "ui_v2",
-        "squareButtonWoodClose",
-      )
-      .setDisplaySize(CLOSE_SIZE, CLOSE_SIZE)
-      .setDepth(10) // на случай перекрытия чем-то внутри контейнера
-      .setInteractive({ useHandCursor: true })
-      .on(
-        "pointerdown",
-        (
-          _p: Phaser.Input.Pointer,
-          _lx: number,
-          _ly: number,
-          e: Phaser.Types.Input.EventData,
-        ) => {
-          e.stopPropagation();
-          this.closeSideMenu();
-        },
-      )
-      .on("pointerover", () => closeBtn.setTint(0xdddddd))
-      .on("pointerout", () => closeBtn.clearTint());
-
-    this.sideMenuContainer.add(closeBtn);
-  }
-
-  private createUI() {
-    // --- ВЕРХНИЙ БАР ---
-    this.add
-      .nineslice(
-        this.scale.width / 2,
-        20,
-        "ui_v2",
-        "upPanelBar",
-        this.scale.width + 160,
-        80,
-        64,
-        64,
-        2,
-        2,
-      )
-      .setDepth(19)
-      .setAlpha(0.9);
-
-    // --- КОНСТАНТЫ LAYOUT ---
-    const CENTER_Y = 22;
-    const ICON_SIZE = 24;
-    const ICON_TEXT_GAP = 5;
-    const EDGE_PADDING = 20;
-    const BURGER_SLOT = 64; // место под будущую кнопку-бургер справа
-
-    // Фиксированные слоты под ресурсы. Ширина подобрана так, чтобы
-    // влезли даже максимальные значения (типа 9999 золота).
-    const SLOT_GOLD = 200;
-    const SLOT_LIVES = 200;
-    const SLOT_MEDAL = 100;
-
-    const labelStyle = {
-      fontSize: "20px",
-      color: "#ffffff",
-      fontStyle: "bold",
-      stroke: "#030303",
-      strokeThickness: 3,
-    } as const;
-
-    // Ширина одной обёртки (можно подстроить под свои слоты)
-    const RESOURCE_CHIP_W = 180;
-    const RESOURCE_CHIP_H = 46;
-
-    // Nineslice-отступы для GlassPanel. Подбираются визуально —
-    // стартовые значения ниже. Если углы «поплывут» — уменьшай left/right.
-    const GLASS_L = 2;
-    const GLASS_R = 2;
-    const GLASS_T = 2;
-    const GLASS_B = 2;
-
-    const drawResource = (
-      slotX: number,
-      iconKey: string,
-      labelText: string,
-    ): Phaser.GameObjects.Text => {
-      // 1. Подложка (полупрозрачная панелька)
-      this.add
-        .nineslice(
-          slotX - 10,
-          CENTER_Y + 1,
-          "ui_v2",
-          "GlassPanel",
-          RESOURCE_CHIP_W,
-          RESOURCE_CHIP_H,
-          GLASS_L,
-          GLASS_R,
-          GLASS_T,
-          GLASS_B,
-        )
-        .setOrigin(0, 0.5)
-        .setDepth(19);
-
-      // 2. Иконка внутри панельки
-      this.add
-        .image(slotX + 12, CENTER_Y, "icon", iconKey)
-        .setDisplaySize(ICON_SIZE, ICON_SIZE)
-        .setOrigin(0, 0.5)
-        .setDepth(20);
-
-      // 3. Текст справа от иконки
-      return this.add
-        .text(
-          slotX + 12 + ICON_SIZE + ICON_TEXT_GAP,
-          CENTER_Y,
-          labelText,
-          labelStyle,
-        )
-        .setOrigin(0, 0.5)
-        .setDepth(20);
-    };
-
-    // --- ЛЕВАЯ ГРУППА: Золото, Дерево ---
-    this.goldText = drawResource(
-      EDGE_PADDING,
-      "gold",
-      `: ${this.economy.gold}`,
-    );
-
-    this.woodText = drawResource(
-      EDGE_PADDING + SLOT_GOLD,
-      "seeds",
-      `: ${this.economy.wood}`,
-    );
-
-    // --- ПРАВАЯ ГРУППА: Жизни, Медали (считаем от правого края) ---
-    const rightEdge = this.scale.width - EDGE_PADDING - BURGER_SLOT;
-
-    this.playerLivesText = drawResource(
-      rightEdge - SLOT_MEDAL - SLOT_LIVES,
-      "heart",
-      `: ${this.playerLives}`,
-    );
-
-    this.medalsText = drawResource(
-      rightEdge - SLOT_MEDAL,
-      "medal",
-      `: ${this.economy.medals}`,
-    );
-
-    // --- ЦЕНТРАЛЬНЫЕ КНОПКИ (полностью авто-раскладка) ---
-    const btnStyle = {
-      fontSize: "16px",
-      color: "#3d2817",
-      fontStyle: "bold",
-      stroke: "#fff5e0",
-      strokeThickness: 2,
-    } as const;
-
-    const btnDefs: [string, () => void][] = [
-      [
-        "[I] Профиль",
-        () => {
-          if (this.profileMenuContainer.visible) {
-            this.openMenu(null);
-          } else {
-            this.openMenu("profile");
-          }
-        },
-      ],
-      ["[ESC] Меню", () => this.togglePause()],
-      [
-        "[B] Инвентарь",
-        () => {
-          if (this.inventory.isVisible) {
-            this.openMenu(null);
-          } else {
-            this.openMenu("inventory");
-          }
-        },
-      ],
-      [
-        "[J] Достижения",
-        () => {
-          if (this.achievementsMenuContainer.visible) {
-            this.openMenu(null);
-          } else {
-            this.openMenu("achievements");
-          }
-        },
-      ],
-    ];
-
-    const btnGap = 40;
-    const btnObjs = btnDefs.map(([label, onClick]) => {
-      const t = this.add
-        .text(0, CENTER_Y, label, btnStyle)
-        .setOrigin(0.5, 0.5)
-        .setInteractive({ useHandCursor: true })
-        .setDepth(20)
-        .on(
-          "pointerdown",
-          (
-            _p: Phaser.Input.Pointer,
-            _lx: number,
-            _ly: number,
-            e: Phaser.Types.Input.EventData,
-          ) => {
-            e.stopPropagation();
-            onClick();
-          },
-        );
-      return t;
-    });
-
-    const totalBtnsW =
-      btnObjs.reduce((s, b) => s + b.width, 0) + btnGap * (btnObjs.length - 1);
-
-    let cursor = this.scale.width / 2 - totalBtnsW / 2;
-    for (const btn of btnObjs) {
-      btn.setX(cursor + btn.width / 2);
-      cursor += btn.width + btnGap;
-    }
-
-    this.achievementsBtnObj = btnObjs[3];
-    this.createAchievementsDot();
-
-    this.createBurgerButton(CENTER_Y);
-    this.createSpeedButton(CENTER_Y);
-
-    const PAD_X = 25;
-    const PAD_Y = 14;
-    const POPUP_W = 540;
-    const POPUP_H = 140;
-    const POPUP_ICON_SIZE = 22;
-    const LINE_HEIGHT = 26;
-
-    const popupBg = this.add.nineslice(
-      0,
-      0,
-      "ui_v2",
-      "panelClear",
-      POPUP_W,
-      POPUP_H,
-      40,
-      40,
-      30,
-      30,
-    );
-
-    const popupBlocker = this.add
-      .zone(0, 0, POPUP_W, POPUP_H)
-      .setInteractive()
-      .on(
-        "pointerdown",
-        (
-          _p: Phaser.Input.Pointer,
-          _lx: number,
-          _ly: number,
-          e: Phaser.Types.Input.EventData,
-        ) => e.stopPropagation(),
-      );
-
-    const titleText = this.add
-      .text(
-        -POPUP_W / 2 + PAD_X,
-        -POPUP_H / 2 + PAD_Y,
-        "РЫНОК (уровень / цена / наличие):",
-        {
-          fontSize: "16px",
-          color: "#ffffff",
-          fontStyle: "bold",
-        },
-      )
-      .setOrigin(0, 0);
-
-    const crops: { key: CropType; label: string }[] = [
-      { key: "potato", label: "Картошка" },
-      { key: "onion", label: "Лук" },
-      { key: "pineapple", label: "Ананас" },
-    ];
-
-    const popupItems: Phaser.GameObjects.GameObject[] = [
-      popupBg,
-      popupBlocker,
-      titleText,
-    ];
-
-    const rowBaseY = -POPUP_H / 2 + PAD_Y + 30;
-
-    crops.forEach((crop, i) => {
-      const y = rowBaseY + i * LINE_HEIGHT;
-
-      const icon = this.add
-        .image(
-          -POPUP_W / 2 + PAD_X + POPUP_ICON_SIZE / 2,
-          y + 8,
-          "icon",
-          crop.key,
-        )
-        .setDisplaySize(POPUP_ICON_SIZE, POPUP_ICON_SIZE);
-
-      const text = this.add
-        .text(-POPUP_W / 2 + PAD_X + POPUP_ICON_SIZE + 8, y, "", {
-          fontSize: "16px",
-          color: "#ffffff",
-          fontStyle: "bold",
-        })
-        .setOrigin(0, 0);
-
-      this.marketPriceTexts[crop.key] = text;
-      popupItems.push(icon, text);
-    });
-
-    this.marketPopupContainer = this.add
-      .container(0, 0, popupItems)
-      .setDepth(22)
-      .setVisible(false);
-
-    this.updateMarketUI();
-  }
-
-  private createBurgerButton(centerY: number) {
-    const ICON_SIZE = 32; // чуть крупнее, раз рамки нет
-    const ICON_BASE_SCALE = ICON_SIZE / 128;
-    const btnX = this.scale.width - 15 - ICON_SIZE / 2;
-    const BURGER_Y_OFFSET = 60;
-
-    this.burgerBtn = this.add
-      .image(btnX, centerY + BURGER_Y_OFFSET, "ui_v2", "squareButtonWoodBurger")
-      .setScale(ICON_BASE_SCALE)
-      .setDepth(21)
-      .setInteractive({ useHandCursor: true })
-      .on(
-        "pointerdown",
-        (
-          _p: Phaser.Input.Pointer,
-          _lx: number,
-          _ly: number,
-          e: Phaser.Types.Input.EventData,
-        ) => {
-          e.stopPropagation();
-          this.toggleBurgerPopup();
-        },
-      );
-
-    this.burgerBtn.setData("baseScale", ICON_BASE_SCALE);
-    this.burgerHoverScale = ICON_BASE_SCALE * 1.15;
-
-    this.burgerBtn.on("pointerover", () => {
-      this.tweens.add({
-        targets: this.burgerBtn,
-        scale: this.burgerHoverScale,
-        duration: 100,
-        ease: "Sine.easeOut",
-      });
-    });
-
-    this.burgerBtn.on("pointerout", () => {
-      const baseScale = this.burgerBtn.getData("baseScale") as number;
-      this.tweens.add({
-        targets: this.burgerBtn,
-        scale: baseScale,
-        duration: 100,
-        ease: "Sine.easeOut",
-      });
-    });
-
-    attachTooltip(this, this.burgerBtn, "Цены на овощи");
-  }
-
-  private createAchievementsDot() {
-    const btn = this.achievementsBtnObj;
-
-    // Правый верхний угол кнопки
-    const dotX = btn.x + btn.width / 2;
-    const dotY = btn.y - btn.height / 2 - 2;
-
-    this.achievementsDotCircle = this.add.circle(0, 0, 6, 0xff2222);
-    this.achievementsDotCircle.setStrokeStyle(2, 0xffffff);
-
-    this.achievementsDot = this.add
-      .container(dotX, dotY, [this.achievementsDotCircle])
-      .setDepth(21)
-      .setVisible(false);
-  }
-
   public refreshAchievementsDot() {
-    if (!this.achievementsDot) return;
-
-    if (
-      this.achievementsMenuContainer &&
-      this.achievementsMenuContainer.visible
-    ) {
-      this.achievements.markAllSeen();
-      this.achievementsDot.setVisible(false);
-      return;
-    }
-
-    if (!this.achievements.hasUnseen) {
-      this.achievementsDot.setVisible(false);
-      return;
-    }
-
-    const wasVisible = this.achievementsDot.visible;
-    this.achievementsDot.setVisible(true);
-
-    if (!wasVisible) {
-      this.achievementsDot.setScale(0);
-      this.tweens.add({
-        targets: this.achievementsDot,
-        scale: 1,
-        duration: 300,
-        ease: "Back.easeOut",
-      });
-    }
+    this.topBar?.refreshAchievementsDot();
   }
 
-  private createSpeedButton(centerY: number) {
-    const BTN_SIZE = 32;
-    const btnX = 15 + BTN_SIZE / 2;
-    const BTN_Y_OFFSET = 60;
-
-    const bg = this.add
-      .image(0, 0, "ui_v2", "squareButtonWoodClear")
-      .setDisplaySize(BTN_SIZE, BTN_SIZE);
-
-    this.speedText = this.add
-      .text(0, 0, "x1", {
-        fontSize: "18px",
-        color: "#ffffff",
-        fontStyle: "bold",
-        stroke: "#000000",
-        strokeThickness: 3,
-      })
-      .setOrigin(0.5);
-
-    this.speedBtn = this.add
-      .container(btnX, centerY + BTN_Y_OFFSET, [bg, this.speedText])
-      .setSize(BTN_SIZE, BTN_SIZE)
-      .setInteractive({ useHandCursor: true })
-      .on(
-        "pointerdown",
-        (
-          _p: Phaser.Input.Pointer,
-          _lx: number,
-          _ly: number,
-          e: Phaser.Types.Input.EventData,
-        ) => {
-          e.stopPropagation();
-          this.cycleGameSpeed();
-        },
-      );
-    attachTooltip(
-      this,
-      this.speedBtn,
-      () => `[F] Скорость игры: x${this.gameSpeed}`,
-    );
-
-    this.speedBtn.on("pointerover", () => bg.setTint(0xdddddd));
-    this.speedBtn.on("pointerout", () => bg.clearTint());
+  public updateMarketUI() {
+    this.topBar?.updateMarketUI();
   }
 
-  private cycleGameSpeed() {
+  public closeMarketPopup() {
+    this.topBar?.closeMarketPopup();
+  }
+
+  public updateSideMenuRealtime() {
+    this.sidePanel?.updateRealtime();
+  }
+
+  public showInformerInfo(level: number, variant: number) {
+    this.interaction.selectedInformerTower = { level, variant };
+    this.interaction.deselectTower();
+    this.selectedEnemy = null;
+    this.radialMenu.close();
+    this.closeMarketPopup();
+    hideTooltip();
+    this.sidePanel.showTowerFromInformer(level, variant);
+  }
+
+  public showEnemyInfo(enemy: Enemy) {
+    this.selectedEnemy = enemy;
+    this.openMenu("side");
+    this.sidePanel.showEnemy(enemy);
+  }
+
+  private autoShowMarketPrices() {
+    this.topBar?.autoShowMarketPrices();
+  }
+
+  public get achievementsMenuVisible(): boolean {
+    return this.achievementsMenuContainer?.visible ?? false;
+  }
+
+  public get profileMenuVisible(): boolean {
+    return this.profileMenuContainer?.visible ?? false;
+  }
+
+  public cycleGameSpeed() {
     const speeds = [1, 2, 3];
     const next = speeds[(speeds.indexOf(this.gameSpeed) + 1) % speeds.length];
     this.setGameSpeed(next);
@@ -3276,137 +2301,7 @@ export class MainScene extends Phaser.Scene {
     this.gameSpeed = speed;
     this.time.timeScale = speed;
     this.anims.globalTimeScale = speed;
-
-    if (this.burgerPopupTimer) {
-      this.burgerPopupTimer.timeScale = 1 / speed;
-    }
-
-    if (this.speedText) {
-      this.speedText.setText(`x${speed}`);
-    }
-  }
-
-  private showMarketPricesPopup(autoCloseMs: number = 5000) {
-    this.updateMarketUI();
-
-    const POPUP_W = 540;
-    const gap = 12;
-
-    const finalX = this.burgerBtn.x - gap - POPUP_W / 2 - 10;
-    const finalY = this.burgerBtn.y + 50;
-
-    this.marketPopupContainer.setPosition(finalX + 40, finalY);
-    this.marketPopupContainer.setVisible(true);
-    this.marketPopupContainer.setAlpha(0);
-
-    this.tweens.add({
-      targets: this.marketPopupContainer,
-      x: finalX,
-      alpha: 1,
-      duration: 200,
-      ease: "Cubic.easeOut",
-    });
-
-    if (this.burgerPopupTimer) this.burgerPopupTimer.remove(false);
-    this.burgerPopupTimer = this.time.addEvent({
-      delay: autoCloseMs,
-      timeScale: 1 / this.gameSpeed,
-      callback: () => {
-        if (!this.burgerIsOpen) return;
-        this.burgerIsOpen = false;
-        const baseScale = this.burgerBtn.getData("baseScale") as number;
-        this.burgerBtn.setScale(baseScale);
-        this.burgerBtn.setTexture("ui_v2", "squareButtonWoodBurger");
-        this.hideMarketPricesPopup();
-      },
-    });
-  }
-
-  private hideMarketPricesPopup() {
-    if (!this.marketPopupContainer.visible) {
-      if (this.burgerPopupTimer) {
-        this.burgerPopupTimer.remove(false);
-        this.burgerPopupTimer = null;
-      }
-      return;
-    }
-
-    this.tweens.add({
-      targets: this.marketPopupContainer,
-      x: this.marketPopupContainer.x + 40,
-      alpha: 0,
-      duration: 180,
-      ease: "Cubic.easeIn",
-      onComplete: () => this.marketPopupContainer.setVisible(false),
-    });
-
-    if (this.burgerPopupTimer) {
-      this.burgerPopupTimer.remove(false);
-      this.burgerPopupTimer = null;
-    }
-  }
-
-  public closeMarketPopup() {
-    if (!this.marketPopupContainer.visible) return;
-
-    this.burgerIsOpen = false;
-    const baseScale = this.burgerBtn.getData("baseScale") as number;
-    this.burgerBtn.setScale(baseScale);
-    this.burgerBtn.setTexture("ui_v2", "squareButtonWoodBurger");
-
-    this.hideMarketPricesPopup();
-  }
-
-  private toggleBurgerPopup() {
-    const willOpen = !this.burgerIsOpen;
-
-    // Ручной вызов — закрываем все остальные меню.
-    // Автоматический (autoShowMarketPrices) — НЕ закрывает.
-    if (willOpen) {
-      this.openMenu(null);
-    }
-
-    this.burgerIsOpen = willOpen;
-    const newFrame = willOpen
-      ? "squareButtonWoodClose"
-      : "squareButtonWoodBurger";
-    const baseScale = this.burgerBtn.getData("baseScale") as number;
-
-    this.burgerBtn.setScale(baseScale);
-
-    this.tweens.add({
-      targets: this.burgerBtn,
-      scale: 0,
-      duration: 100,
-      ease: "Sine.easeIn",
-      onComplete: () => {
-        this.burgerBtn.setTexture("ui_v2", newFrame);
-        this.burgerBtn.setScale(0);
-        this.tweens.add({
-          targets: this.burgerBtn,
-          scale: baseScale,
-          duration: 180,
-          ease: "Back.easeOut",
-        });
-      },
-    });
-
-    if (willOpen) {
-      this.showMarketPricesPopup(5000);
-    } else {
-      this.hideMarketPricesPopup();
-    }
-  }
-
-  private autoShowMarketPrices() {
-    if (this.isGameOver) return;
-    if (this.burgerIsOpen) return; // если игрок уже открыл меню руками — не переключаем
-
-    this.burgerIsOpen = true;
-    const baseScale = this.burgerBtn.getData("baseScale") as number;
-    this.burgerBtn.setScale(baseScale);
-    this.burgerBtn.setTexture("ui_v2", "squareButtonWoodClose");
-    this.showMarketPricesPopup(3000);
+    this.topBar?.setGameSpeed(speed);
   }
 
   public showNotification(message: string) {
@@ -3462,187 +2357,6 @@ export class MainScene extends Phaser.Scene {
         },
       });
     });
-  }
-
-  public showInformerInfo(level: number, variant: number) {
-    this.interaction.selectedInformerTower = { level, variant };
-    this.interaction.deselectTower();
-    this.selectedEnemy = null;
-
-    // Закрываем только мешающие меню, но НЕ трогаем informer и sideMenu
-    this.radialMenu.close();
-    this.closeMarketPopup();
-    hideTooltip();
-
-    // Панель поверх энциклопедии (Informer.depth = 300)
-    this.sideMenuContainer.setDepth(400);
-    this.sideMenuContainer.setVisible(true);
-
-    this.targetModeBtnText.setVisible(false);
-    this.btnRandomMerge.setVisible(false);
-    this.btnTargetMerge.setVisible(false);
-    this.btnSell.setVisible(false);
-    if (this.btnReroll) this.btnReroll.setVisible(false);
-
-    this.updateInformerUI();
-  }
-
-  public updateInformerUI() {
-    if (!this.interaction.selectedInformerTower) return;
-    const { level, variant } = this.interaction.selectedInformerTower;
-    const stats = TOWER_DICTIONARY[level]?.[variant];
-    if (!stats) return;
-
-    // Иконка
-    this.towerIconGroup.setVisible(true);
-    this.towerIconImage.anims.stop();
-    const textureName = `${level}_${variant}`;
-    if (this.textures.exists("towers")) {
-      this.towerIconImage.setTexture("towers", textureName);
-      const frame = this.textures.getFrame("towers", textureName);
-      if (frame) {
-        const maxDim = Math.max(frame.width, frame.height);
-        this.towerIconImage.setScale(110 / maxDim);
-      }
-    }
-
-    const damageType = (stats as any).damageType || 1;
-    const typeLvl = this.economy.damageUpgrades[damageType] || 0;
-    const buffMultiplier = typeLvl * 0.15 + this.economy.globalDamageBuff;
-
-    const bonusMin =
-      Math.floor(stats.minDamage * (1 + buffMultiplier)) - stats.minDamage;
-    const bonusMax =
-      Math.floor(stats.maxDamage * (1 + buffMultiplier)) - stats.maxDamage;
-
-    let dmgStr = `${stats.minDamage} - ${stats.maxDamage}`;
-    if (bonusMin > 0 || bonusMax > 0) {
-      dmgStr +=
-        bonusMin === bonusMax ? ` +${bonusMin}` : ` +${bonusMin}-${bonusMax}`;
-    }
-
-    let rate = stats.fireRate;
-    if (this.metaProgress) {
-      const titleBuff = this.metaProgress.currentTitleId * 0.01;
-      rate = rate * (1 - titleBuff);
-    }
-    const fireRateSec = (rate / 1000).toFixed(2);
-    const dmgTypeName = Tower.DAMAGE_TYPES[damageType] || "Обычный";
-
-    this.towerTitleText.setText(`${stats.name.toUpperCase()}\nУР. ${level}`);
-    this.towerInfoText.setText(
-      `Урон: ${dmgStr}\n` +
-        `Тип: ${dmgTypeName}\n` +
-        `Дальность: ${stats.range}\n` +
-        `Скор. атаки: ${fireRateSec}с`,
-    );
-
-    this.centerSideMenuText();
-
-    this.targetModeBtnText.setVisible(false);
-    this.btnRandomMerge.setVisible(false);
-    this.btnTargetMerge.setVisible(false);
-    this.btnSell.setVisible(false);
-    this.btnReroll.setVisible(false);
-
-    if ((stats as any).desc) {
-      this.abilityIcon.setVisible(true);
-      this.abilityLabelText.setText("Способность (наведи)");
-      this.abilityLabelText.setColor("#ffd700");
-      this.abilityTooltip.setText((stats as any).desc);
-    } else {
-      this.abilityIcon.setVisible(true);
-      this.abilityLabelText.setText("Нет способности");
-      this.abilityLabelText.setColor("#fdfdfd");
-      this.abilityTooltip.setText("У этой башни нет особых способностей");
-    }
-  }
-
-  public showEnemyInfo(enemy: Enemy) {
-    this.selectedEnemy = enemy;
-    this.openMenu("side");
-    this.targetModeBtnText.setVisible(false);
-    this.btnRandomMerge.setVisible(false);
-    this.btnTargetMerge.setVisible(false);
-    this.btnSell.setVisible(false);
-    if (this.btnReroll) this.btnReroll.setVisible(false);
-    this.abilityIcon.setVisible(false);
-    this.abilityRangeCircle.setVisible(false);
-    this.updateEnemyUI();
-  }
-
-  private updateEnemyUI() {
-    if (!this.selectedEnemy) {
-      this.sideMenuContainer.setVisible(false);
-      return;
-    }
-
-    this.towerIconGroup.setVisible(true);
-    const studioMobId = this.selectedEnemy.studioMobId;
-    const mobKey = `mob_${studioMobId}_front`;
-
-    if (this.textures.exists(mobKey)) {
-      this.towerIconImage.anims.stop();
-      this.towerIconImage.setTexture(mobKey, `${mobKey}_0`);
-
-      const frame = this.textures.getFrame(mobKey, `${mobKey}_0`);
-      if (frame) {
-        const maxDim = Math.max(frame.width, frame.height);
-        this.towerIconImage.setScale(120 / maxDim);
-      }
-    } else {
-      this.towerIconImage.setTexture("towers", "1_1");
-    }
-
-    const statusText = this.selectedEnemy.isDead ? " ☠" : "";
-    this.towerTitleText.setText(
-      `МОБ: ${this.selectedEnemy.displayName}${statusText}`,
-    );
-
-    const resists = this.selectedEnemy.getResistances();
-    const weakArr: string[] = [];
-    const resistArr: string[] = [];
-
-    for (let i = 1; i <= 7; i++) {
-      const mult = resists[i] || 1;
-      const name = Tower.DAMAGE_TYPES[i];
-      if (mult > 1) {
-        weakArr.push(`${name} +${Math.round((mult - 1) * 100)}%`);
-      } else if (mult < 1) {
-        resistArr.push(`${name} -${Math.round((1 - mult) * 100)}%`);
-      }
-    }
-
-    const weakStr = weakArr.length ? weakArr.join(", ") : "—";
-    const resistStr = resistArr.length ? resistArr.join(", ") : "—";
-    const displayHp = this.selectedEnemy.isDead
-      ? 0
-      : Math.max(0, Math.floor(this.selectedEnemy.hp));
-
-    const baseSpd = Math.round(this.selectedEnemy.getBaseSpeed());
-    const curSpd = Math.round(this.selectedEnemy.getEffectiveSpeed());
-    const spdStr =
-      baseSpd === curSpd ? `${baseSpd}` : `${baseSpd} (${curSpd})`;
-
-    this.towerInfoText.setText(
-      `HP: ${displayHp} / ${this.selectedEnemy.maxHp}\n` +
-        `Скорость: ${spdStr}\n` +
-        `Слабость: ${weakStr}\n` +
-        `Защита: ${resistStr}`,
-    );
-
-    this.centerSideMenuText();
-
-    this.targetModeBtnText.setVisible(false);
-
-    this.targetModeBtnText.setVisible(false);
-    this.btnRandomMerge.setVisible(false);
-    this.btnTargetMerge.setVisible(false);
-    this.btnSell.setVisible(false);
-    this.btnReroll.setVisible(false);
-    this.abilityIcon.setVisible(false);
-    this.abilityTooltip.setVisible(false);
-    this.abilityRangeCircle.setVisible(false);
   }
 
   private drawGrid() {
