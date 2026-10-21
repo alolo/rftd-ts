@@ -219,7 +219,7 @@ export class TopBarUI {
       0,
       0,
       "ui_v2",
-      "panelClear",
+      "woodButtonClear",
       POPUP_W,
       POPUP_H,
       40,

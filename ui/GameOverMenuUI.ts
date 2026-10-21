@@ -210,9 +210,7 @@ export class GameOverMenuUI {
             .then(() =>
               this.scene.showNotification("📋 Код скопирован в буфер обмена!"),
             )
-            .catch(() =>
-              this.scene.showNotification("❌ Ошибка копирования"),
-            );
+            .catch(() => this.scene.showNotification("❌ Ошибка копирования"));
         },
       );
 
@@ -278,7 +276,7 @@ export class GameOverMenuUI {
 
     const btnRestart = makeBtn(
       centerX,
-      centerY + 145,
+      centerY + 125,
       "button_red.png",
       "Начать заново",
       "#ffffff",

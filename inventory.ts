@@ -8,40 +8,42 @@ export interface InventorySlot {
 
 export type ItemType = "ticket" | CropType | "reroll" | "coupon";
 
-const ITEM_EMOJIS: Record<string, string> = {
-  ticket: "🎫",
-  potato: "🥔",
-  onion: "🧅",
-  pineapple: "🍍",
-  reroll: "🎲",
-  coupon: "🎟️",
+const ITEM_DESCRIPTIONS: Record<string, string> = {
+  ticket: "Счастливый билет\nИспытай удачу в рулетке!",
+  potato: "Картошка",
+  onion: "Лук",
+  pineapple: "Ананас",
+  reroll: "Кубик замены\nЗаменяет башню 6 ур. на случайную.",
+  coupon: "Купон на скидку\nБесплатная постройка башни 4 уровня (800 з)!",
 };
 
-const ITEM_DESCRIPTIONS: Record<string, string> = {
-  ticket: "🎫 Счастливый билет\nИспытай удачу в рулетке!",
-  potato: "🥔 Картошка",
-  onion: "🧅 Лук",
-  pineapple: "🍍 Ананас",
-  reroll: "🎲 Кубик замены\nЗаменяет башню 6 ур. на случайную.",
-  coupon: "🎟️ Купон на скидку\nБесплатная постройка башни 4 уровня (800 з)!",
+const ITEM_ICON_FRAMES: Record<string, string> = {
+  ticket: "ticket",
+  potato: "potato",
+  onion: "onion",
+  pineapple: "pineapple",
+  reroll: "couponReroll",
+  coupon: "couponDiscount",
 };
 
 export class Inventory {
   public readonly WIDTH = 512;
   public readonly HEIGHT = 256;
+  private readonly SLOT_ICON_SIZE = 38;
 
   private scene: Phaser.Scene;
   private economy: EconomyManager;
   private container!: Phaser.GameObjects.Container;
   private slots: InventorySlot[] = [];
   private slotVisuals: {
-    icon: Phaser.GameObjects.Text;
+    icon: Phaser.GameObjects.Image;
     text: Phaser.GameObjects.Text;
   }[] = [];
 
   private sellMenuContainer!: Phaser.GameObjects.Container;
   private sellText!: Phaser.GameObjects.Text;
   private pendingSellIndex: number | null = null;
+  private sellIcon!: Phaser.GameObjects.Image;
   private itemTooltip!: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene, economy: EconomyManager) {
@@ -72,6 +74,7 @@ export class Inventory {
     const height = this.HEIGHT;
     const x = this.scene.scale.width / 2;
     const y = this.scene.scale.height - height / 2 - 20;
+    const SELL_BTN_Y = 40;
 
     this.container = this.scene.add
       .container(x, y)
@@ -82,7 +85,7 @@ export class Inventory {
       0,
       0,
       "ui_v2",
-      "panelClear",
+      "woodButtonClear",
       width,
       height,
       40,
@@ -108,20 +111,49 @@ export class Inventory {
 
     this.container.add([bg, hitZone]);
 
-    const title = this.scene.add
-      .text(0, -height / 2 + 25, "🎒 ИНВЕНТАРЬ", {
+    // Баннер-заголовок (как в магазине)
+    const banner = this.scene.add.image(
+      0,
+      -height / 2 + 5,
+      "ui_v2",
+      "greenBanner1",
+    );
+    banner.setScale(0.45);
+    this.container.add(banner);
+
+    // Группа заголовка: иконка сумки + текст
+    const titleGroup = this.scene.add.container(0, -height / 2 + 5);
+
+    const bagIcon = this.scene.add
+      .image(0, 0, "icon", "bag")
+      .setDisplaySize(26, 26);
+
+    const titleText = this.scene.add
+      .text(0, 0, "ИНВЕНТАРЬ", {
         fontSize: "18px",
         color: "#ffffff",
         fontStyle: "bold",
+        stroke: "#1f3d1f",
+        strokeThickness: 4,
       })
-      .setOrigin(0.5);
-    this.container.add(title);
+      .setOrigin(0, 0.5);
+
+    const gap = 8;
+    const iconW = bagIcon.displayWidth;
+    const textW = titleText.width;
+    const totalWidth = iconW + gap + textW;
+    const leftX = -totalWidth / 2;
+    bagIcon.setX(leftX + iconW / 2);
+    titleText.setX(leftX + iconW + gap);
+
+    titleGroup.add([bagIcon, titleText]);
+    this.container.add(titleGroup);
 
     const cols = 4;
     const spacingX = 100;
     const spacingY = 70;
     const startX = -150;
-    const startY = -50;
+    const startY = -58;
 
     for (let i = 0; i < 12; i++) {
       const col = i % cols;
@@ -135,9 +167,15 @@ export class Inventory {
       slotBg.lineStyle(2, 0x777777);
       slotBg.strokeRect(slotX - 24, slotY - 24, 48, 48);
 
+      const slotFrame = this.scene.add
+        .image(slotX, slotY, "ui_v2", "squareButtonWoodWithoutBg")
+        .setDisplaySize(50, 50);
+
       const icon = this.scene.add
-        .text(slotX, slotY, "", { fontSize: "28px" })
-        .setOrigin(0.5);
+        .image(slotX, slotY, "icon", "potato")
+        .setDisplaySize(this.SLOT_ICON_SIZE, this.SLOT_ICON_SIZE)
+        .setVisible(false);
+      icon.setData("baseScale", icon.scaleX);
 
       const countText = this.scene.add
         .text(slotX + 24, slotY + 24, "", {
@@ -166,19 +204,45 @@ export class Inventory {
         )
         .on("pointerover", () => {
           const slot = this.slots[i];
-          if (slot && slot.type) {
-            this.itemTooltip.setText(
-              ITEM_DESCRIPTIONS[slot.type] || "Неизвестный предмет",
-            );
-            this.itemTooltip.setPosition(slotX, slotY - 40);
-            this.itemTooltip.setVisible(true);
-          }
+          if (!slot || !slot.type) return;
+
+          slotFrame.setTint(0xdddddd);
+
+          // Тултип
+          this.itemTooltip.setText(
+            ITEM_DESCRIPTIONS[slot.type] || "Неизвестный предмет",
+          );
+          this.itemTooltip.setPosition(slotX, slotY - 40);
+          this.itemTooltip.setVisible(true);
+
+          // Hover-увеличение иконки
+          const iconImg = this.slotVisuals[i].icon;
+          const baseScale = iconImg.getData("baseScale") as number;
+          this.scene.tweens.killTweensOf(iconImg);
+          this.scene.tweens.add({
+            targets: iconImg,
+            scale: baseScale * 1.2,
+            duration: 100,
+            ease: "Sine.easeOut",
+          });
         })
         .on("pointerout", () => {
           this.itemTooltip.setVisible(false);
+
+          slotFrame.clearTint();
+
+          const iconImg = this.slotVisuals[i].icon;
+          const baseScale = iconImg.getData("baseScale") as number;
+          this.scene.tweens.killTweensOf(iconImg);
+          this.scene.tweens.add({
+            targets: iconImg,
+            scale: baseScale,
+            duration: 100,
+            ease: "Sine.easeOut",
+          });
         });
 
-      this.container.add([slotBg, icon, countText, slotZone]);
+      this.container.add([slotBg, slotFrame, icon, countText, slotZone]);
       this.slotVisuals.push({ icon, text: countText });
     }
 
@@ -203,67 +267,90 @@ export class Inventory {
       .setVisible(false)
       .setDepth(10);
 
-    const sellBg = this.scene.add.graphics();
-    sellBg.fillStyle(0x111111, 0.98);
-    sellBg.fillRoundedRect(-140, -60, 280, 120, 8);
-    sellBg.lineStyle(3, 0xffd700);
-    sellBg.strokeRoundedRect(-140, -60, 280, 120, 8);
+    // Фон — nineslice woodButtonClear
+    const sellBg = this.scene.add.nineslice(
+      0,
+      0,
+      "ui_v2",
+      "woodButtonClear",
+      340,
+      170,
+      40,
+      40,
+      40,
+      40,
+    );
 
+    // Иконка продаваемого предмета
+    this.sellIcon = this.scene.add
+      .image(-100, -45, "icon", "potato")
+      .setDisplaySize(48, 48);
+
+    // Текст (слева-верх от кнопок)
     this.sellText = this.scene.add
-      .text(0, -30, "Продать?\n...", {
-        fontSize: "18px",
-        color: "#ffffff",
-        align: "center",
+      .text(-60, -45, "Продать все?\n...", {
+        fontSize: "16px",
+        color: "#fff5e0",
+        align: "left",
         fontStyle: "bold",
+        stroke: "#000000",
+        strokeThickness: 3,
+        lineSpacing: 4,
       })
-      .setOrigin(0.5);
+      .setOrigin(0, 0.5);
 
-    const btnYes = this.scene.add
-      .text(-60, 30, "[1] ДА", {
-        fontSize: "16px",
-        color: "#aaffaa",
-        backgroundColor: "#335533",
-        padding: { x: 10, y: 5 },
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on(
-        "pointerdown",
-        (
-          p: Phaser.Input.Pointer,
-          x: number,
-          y: number,
-          e: Phaser.Types.Input.EventData,
-        ) => {
-          e.stopPropagation();
-          this.handleKeyOne();
-        },
-      );
+    // Хелпер для кнопок (nineslice buttonPanelLight)
+    const makeSellBtn = (
+      x: number,
+      text: string,
+      color: string,
+      onClick: () => void,
+    ) => {
+      const img = this.scene.add
+        .image(0, 0, "ui_v2", "buttonPanelLightMini")
+        .setDisplaySize(130, 46);
+      const label = this.scene.add
+        .text(0, 0, text, {
+          fontSize: "16px",
+          color,
+          fontStyle: "bold",
+          stroke: "#000000",
+          strokeThickness: 1,
+        })
+        .setOrigin(0.5);
 
-    const btnNo = this.scene.add
-      .text(60, 30, "[2] НЕТ", {
-        fontSize: "16px",
-        color: "#ffaaaa",
-        backgroundColor: "#553333",
-        padding: { x: 10, y: 5 },
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on(
-        "pointerdown",
-        (
-          p: Phaser.Input.Pointer,
-          x: number,
-          y: number,
-          e: Phaser.Types.Input.EventData,
-        ) => {
-          e.stopPropagation();
-          this.handleKeyTwo();
-        },
-      );
+      const btn = this.scene.add.container(x, SELL_BTN_Y, [img, label]);
 
+      img
+        .setInteractive({ useHandCursor: true })
+        .on(
+          "pointerdown",
+          (
+            p: Phaser.Input.Pointer,
+            x: number,
+            y: number,
+            e: Phaser.Types.Input.EventData,
+          ) => {
+            e.stopPropagation();
+            onClick();
+          },
+        )
+        .on("pointerover", () => img.setTint(0xdddddd))
+        .on("pointerout", () => img.clearTint());
+
+      return btn;
+    };
+
+    const btnYes = makeSellBtn(-80, "ДА [1]", "#4c9c4cff", () =>
+      this.handleKeyOne(),
+    );
+    const btnNo = makeSellBtn(80, "НЕТ [2]", "#b92b2bff", () =>
+      this.handleKeyTwo(),
+    );
+
+    // Блокер — добавлен ДО кнопок, чтобы не перекрывать клики
     const sellBlocker = this.scene.add
-      .zone(0, 0, 280, 120)
+      .zone(0, 0, 340, 170)
       .setInteractive()
       .on(
         "pointerdown",
@@ -278,6 +365,7 @@ export class Inventory {
     this.sellMenuContainer.add([
       sellBg,
       sellBlocker,
+      this.sellIcon,
       this.sellText,
       btnYes,
       btnNo,
@@ -310,8 +398,10 @@ export class Inventory {
     const pricePerItem = this.economy.marketPrices[slot.type as CropType];
     const totalRevenue = pricePerItem * slot.count;
 
+    const frameName = ITEM_ICON_FRAMES[slot.type] || "potato";
+    this.sellIcon.setTexture("icon", frameName);
     this.sellText.setText(
-      `Продать все ${ITEM_EMOJIS[slot.type]} (${slot.count}шт)\nза ${totalRevenue}g?`,
+      `Продать все (${slot.count} шт)\nза ${totalRevenue} золота?`,
     );
     this.sellMenuContainer.setVisible(true);
   }
@@ -332,9 +422,9 @@ export class Inventory {
       }
 
       const cropNames: Record<string, string> = {
-        potato: "🥔 Картошку",
-        onion: "🧅 Лук",
-        pineapple: "🍍 Ананасы",
+        potato: "Картошку",
+        onion: "Лук",
+        pineapple: "Ананасы",
       };
       const itemName = cropNames[slot.type] || "Овощи";
       const count = slot.count;
@@ -428,10 +518,20 @@ export class Inventory {
       const vis = this.slotVisuals[i];
 
       if (slot.type) {
-        vis.icon.setText(ITEM_EMOJIS[slot.type] || "❓");
+        const frameName = ITEM_ICON_FRAMES[slot.type] || "potato";
+        if (this.scene.textures.getFrame("icon", frameName)) {
+          vis.icon.setTexture("icon", frameName);
+          vis.icon.setDisplaySize(this.SLOT_ICON_SIZE, this.SLOT_ICON_SIZE);
+          this.scene.tweens.killTweensOf(vis.icon);
+          vis.icon.setData("baseScale", vis.icon.scaleX);
+          vis.icon.setVisible(true);
+        } else {
+          vis.icon.setVisible(false);
+        }
         vis.text.setText(slot.count.toString());
       } else {
-        vis.icon.setText("");
+        this.scene.tweens.killTweensOf(vis.icon);
+        vis.icon.setVisible(false);
         vis.text.setText("");
       }
     }

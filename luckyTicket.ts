@@ -47,7 +47,7 @@ export class LuckyTicket {
     bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 16);
 
     const title = this.scene.add
-      .text(0, -110, "🎫 СЧАСТЛИВЫЙ БИЛЕТ", {
+      .text(0, -110, "СЧАСТЛИВЫЙ БИЛЕТ", {
         fontSize: "28px",
         color: "#ffaa00",
         fontStyle: "bold",

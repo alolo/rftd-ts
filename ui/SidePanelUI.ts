@@ -49,7 +49,7 @@ export class SidePanelUI {
       0,
       0,
       "ui_v2",
-      "panelClear",
+      "woodButtonClear",
       panelWidth,
       panelHeight,
       40,
@@ -73,9 +73,8 @@ export class SidePanelUI {
       );
     this.container.add(blocker);
 
-    // ЛЕВЫЙ БЛОК: ИКОНКА + ТЕКСТ
-    const iconX = -panelWidth / 2 + 40 + 70;
-    const iconSize = 140;
+    const iconSize = 110;
+    const iconX = -panelWidth / 2 + 25 + iconSize / 2;
 
     this.towerIconGroup = this.scene.add.container(iconX, 0);
     this.container.add(this.towerIconGroup);
@@ -97,12 +96,12 @@ export class SidePanelUI {
     }
     this.towerIconGroup.add(this.towerIconImage);
 
-    const textX = -panelWidth / 2 + 40 + iconSize + 30;
-    const textWidth = 420;
+    const textX = iconX + iconSize / 2 + 25;
+    const textWidth = 900;
 
     this.towerTitleText = this.scene.add
       .text(textX, -100, "", {
-        fontSize: "24px",
+        fontSize: "20px",
         color: "#ffffff",
         fontStyle: "bold",
         stroke: "#000000",
@@ -114,7 +113,7 @@ export class SidePanelUI {
 
     this.towerInfoText = this.scene.add
       .text(textX, -30, "", {
-        fontSize: "22px",
+        fontSize: "18px",
         color: "#fff5ea",
         fontStyle: "bold",
         stroke: "#000000",
@@ -139,11 +138,11 @@ export class SidePanelUI {
     this.container.add(this.multiSelectText);
 
     // ПРАВЫЙ БЛОК: СЕТКА КНОПОК
-    const btnW = 280;
-    const btnH = 56;
+    const btnW = 240;
+    const btnH = 48;
     const btnGapX = 10;
     const totalBtnW = btnW * 2 + btnGapX;
-    const btnStartX = panelWidth / 2 - 30 - totalBtnW;
+    const btnStartX = panelWidth / 2 - 25 - totalBtnW;
 
     const col0X = btnStartX + btnW / 2;
     const col1X = btnStartX + btnW + btnGapX + btnW / 2;
@@ -500,8 +499,24 @@ export class SidePanelUI {
     };
     const wavesLeft = Math.max(0, 2 - crop.wavesAlive);
 
+    const type = crop.type;
+    const plantedCount = this.scene.economy.cropsPlanted[type] || 0;
+    const thresholds = [15, 30, 45, 60, 75, 90];
+    let priceLevel = 0;
+    for (const t of thresholds) {
+      if (plantedCount >= t) priceLevel++;
+    }
+    const nextThreshold = priceLevel < 6 ? thresholds[priceLevel] : null;
+    const toNext = nextThreshold ? nextThreshold - plantedCount : 0;
+
+    const progressLine = nextThreshold
+      ? `Уровень цены: ${priceLevel}/6\nПосажено: ${plantedCount} (до след.: ${toNext})`
+      : `Уровень цены: 6/6 (макс)\nПосажено: ${plantedCount}`;
+
     this.towerTitleText.setText(cropNames[crop.type] || "Грядка");
-    this.towerInfoText.setText(`🌱 Созревание\nОсталось волн: ${wavesLeft}`);
+    this.towerInfoText.setText(
+      `Созревание\nОсталось волн: ${wavesLeft}\n${progressLine}`,
+    );
     this.centerText();
 
     this.targetModeBtnText.setVisible(false);
@@ -677,11 +692,14 @@ export class SidePanelUI {
     const curSpd = Math.round(enemy.getEffectiveSpeed());
     const spdStr = baseSpd === curSpd ? `${baseSpd}` : `${baseSpd} (${curSpd})`;
 
+    const immuneLine = enemy.isImmuneToSlow ? "\nИммунитет к замедлению" : "";
+
     this.towerInfoText.setText(
       `HP: ${displayHp} / ${enemy.maxHp}\n` +
         `Скорость: ${spdStr}\n` +
         `Уязвимость: ${weakStr}\n` +
-        `Сопротивление: ${resistStr}`,
+        `Сопротивление: ${resistStr}` +
+        immuneLine,
     );
     this.centerText();
 

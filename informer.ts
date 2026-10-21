@@ -20,41 +20,7 @@ export class Informer {
       .setDepth(300)
       .setVisible(false);
 
-    const bg = this.scene.add.graphics();
-    bg.fillStyle(0x111111, 0.85);
-    bg.fillRoundedRect(
-      -this.MENU_WIDTH / 2,
-      -this.MENU_HEIGHT / 2,
-      this.MENU_WIDTH,
-      this.MENU_HEIGHT,
-      16,
-    );
-    bg.lineStyle(3, 0x00ffff);
-    bg.strokeRoundedRect(
-      -this.MENU_WIDTH / 2,
-      -this.MENU_HEIGHT / 2,
-      this.MENU_WIDTH,
-      this.MENU_HEIGHT,
-      16,
-    );
-
-    const title = this.scene.add
-      .text(0, -this.MENU_HEIGHT / 2 + 25, "📚 ЭНЦИКЛОПЕДИЯ БАШЕН", {
-        fontSize: "22px",
-        color: "#00ffff",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5);
-
-    const btnClose = this.scene.add
-      .text(this.MENU_WIDTH / 2 - 30, -this.MENU_HEIGHT / 2 + 25, "✖", {
-        fontSize: "24px",
-        color: "#ff5555",
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerdown", () => this.hide());
-
+    // Блокировщик кликов (нижний слой)
     const blocker = this.scene.add
       .zone(
         -this.MENU_WIDTH / 2,
@@ -74,7 +40,71 @@ export class Informer {
         ) => e.stopPropagation(),
       );
 
-    this.container.add([blocker, bg, title, btnClose]);
+    // Фон — деревянная панель через nineslice
+    const bg = this.scene.add.nineslice(
+      0,
+      0,
+      "ui_v2",
+      "woodButtonClear",
+      this.MENU_WIDTH,
+      this.MENU_HEIGHT,
+      50,
+      50,
+      50,
+      50,
+    );
+
+    // Баннер-заголовок сверху
+    const banner = this.scene.add.image(
+      0,
+      -this.MENU_HEIGHT / 2 + 5,
+      "ui_v2",
+      "greenBanner1",
+    );
+    banner.setScale(0.6);
+
+    // Группа заголовка: иконка книги + текст
+    const titleGroup = this.scene.add.container(0, -this.MENU_HEIGHT / 2 + 5);
+
+    const bookIcon = this.scene.add
+      .image(0, 0, "icon", "book")
+      .setDisplaySize(26, 26);
+
+    const titleText = this.scene.add
+      .text(0, 0, "ЭНЦИКЛОПЕДИЯ БАШЕН", {
+        fontSize: "18px",
+        color: "#ffffff",
+        fontStyle: "bold",
+        stroke: "#1f3d1f",
+        strokeThickness: 4,
+      })
+      .setOrigin(0, 0.5);
+
+    const gap = 8;
+    const iconW = bookIcon.displayWidth;
+    const textW = titleText.width;
+    const totalWidth = iconW + gap + textW;
+    const leftX = -totalWidth / 2;
+    bookIcon.setX(leftX + iconW / 2);
+    titleText.setX(leftX + iconW + gap);
+
+    titleGroup.add([bookIcon, titleText]);
+
+    // Кнопка закрытия — деревянный крестик в правом верхнем углу
+    const btnClose = this.scene.add
+      .image(
+        this.MENU_WIDTH / 2 - 6,
+        -this.MENU_HEIGHT / 2 + 6,
+        "ui_v2",
+        "squareButtonWoodClose",
+      )
+      .setDisplaySize(32, 32)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => this.hide())
+      .on("pointerover", () => btnClose.setTint(0xdddddd))
+      .on("pointerout", () => btnClose.clearTint());
+
+    this.container.add([blocker, bg, banner, titleGroup, btnClose]);
 
     // --- ГЕНЕРИРУЕМ СЕТКУ БАШЕН ---
     const cols = 7;
@@ -95,6 +125,7 @@ export class Informer {
         const slotX = startX + col * totalCellSize;
         const slotY = startY + row * totalCellSize;
 
+        // 1. Цветная заливка уровня (осталась как была)
         const slotBg = this.scene.add.graphics();
         slotBg.fillStyle(this.getFarmColor(lvl), 1);
         const p = 2;
@@ -104,9 +135,15 @@ export class Informer {
           cellSize - p * 2,
           cellSize - p * 2,
         );
-
         this.container.add(slotBg);
 
+        // 2. Рамка из UI-пака поверх заливки
+        const slotFrame = this.scene.add
+          .image(slotX, slotY, "ui_v2", "squareButtonWoodWithoutBg")
+          .setDisplaySize(cellSize, cellSize);
+        this.container.add(slotFrame);
+
+        // 3. Иконка башни поверх рамки
         const textureName = `${lvl}_${v}`;
         const towerIcon = this.scene.add.image(
           slotX,
@@ -114,40 +151,41 @@ export class Informer {
           "towers",
           textureName,
         );
-
         towerIcon.setOrigin(0.5, 0.5);
 
-        // ИСПРАВЛЕНО: baseScale теперь реально соответствует тому,
-        // что установлено у иконки. Раньше baseScale оставался 0.31,
-        // и при ховере иконка прыгала к неверному размеру.
         const maxDim = Math.max(towerIcon.width, towerIcon.height);
         let baseScale = 0.31;
         if (maxDim > 0) {
-          baseScale = 42 / maxDim;
+          baseScale = (cellSize - 12) / maxDim;
           towerIcon.setScale(baseScale);
         }
-
         this.container.add(towerIcon);
 
+        // 4. Невидимая зона клика
         const zone = this.scene.add
           .zone(slotX, slotY, cellSize, cellSize)
           .setInteractive({ useHandCursor: true });
+
         zone.on("pointerover", () => {
+          this.scene.tweens.killTweensOf(towerIcon);
           this.scene.tweens.add({
             targets: towerIcon,
             scale: baseScale * 1.25,
             duration: 100,
             ease: "Sine.easeOut",
           });
+          slotFrame.setTint(0xdddddd);
         });
 
         zone.on("pointerout", () => {
+          this.scene.tweens.killTweensOf(towerIcon);
           this.scene.tweens.add({
             targets: towerIcon,
             scale: baseScale,
             duration: 100,
             ease: "Sine.easeOut",
           });
+          slotFrame.clearTint();
         });
 
         zone.on(
@@ -160,7 +198,7 @@ export class Informer {
           ) => {
             e.stopPropagation();
             this.scene.showInformerInfo(lvl, v);
-
+            this.scene.tweens.killTweensOf(towerIcon);
             this.scene.tweens.add({
               targets: towerIcon,
               scale: baseScale * 0.9,

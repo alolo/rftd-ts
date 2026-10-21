@@ -8,6 +8,7 @@ export class Market {
 
   private readonly MENU_WIDTH = 512;
   private readonly MENU_HEIGHT = 336;
+  private readonly MENU_BOTTOM_MARGIN = 20;
 
   constructor(private scene: MainScene) {
     this.createUI();
@@ -15,59 +16,15 @@ export class Market {
 
   private createUI() {
     const x = this.scene.scale.width / 2;
-    const y = this.scene.scale.height - this.MENU_HEIGHT / 1.8;
+    const y =
+      this.scene.scale.height - this.MENU_HEIGHT / 2 - this.MENU_BOTTOM_MARGIN;
 
     this.container = this.scene.add
       .container(x, y)
       .setDepth(300)
       .setVisible(false);
 
-    const bg = this.scene.add.graphics();
-    bg.fillStyle(0x111111, 0.7);
-    bg.fillRoundedRect(
-      -this.MENU_WIDTH / 2,
-      -this.MENU_HEIGHT / 2,
-      this.MENU_WIDTH,
-      this.MENU_HEIGHT,
-      16,
-    );
-    bg.lineStyle(2, 0xffd700);
-    bg.strokeRoundedRect(
-      -this.MENU_WIDTH / 2,
-      -this.MENU_HEIGHT / 2,
-      this.MENU_WIDTH,
-      this.MENU_HEIGHT,
-      16,
-    );
-
-    const title = this.scene.add
-      .text(0, -this.MENU_HEIGHT / 2 + 25, "⚖️ РЫНОК", {
-        fontSize: "18px",
-        color: "#ffd700",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5);
-
-    const btnClose = this.scene.add
-      .text(this.MENU_WIDTH / 2 - 30, -this.MENU_HEIGHT / 2 + 25, "✖", {
-        fontSize: "24px",
-        color: "#ff5555",
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerdown", () => this.hide());
-
-    this.tooltipText = this.scene.add
-      .text(0, -180, "Наведите на товар для информации", {
-        fontSize: "16px",
-        color: "#ffffff",
-        align: "center",
-        backgroundColor: "#222222",
-        padding: { x: 12, y: 12 },
-      })
-      .setOrigin(0.5);
-    this.tooltipText.setStroke("#ffffff", 0.5);
-
+    // Блокировщик кликов (нижний слой)
     const marketBlocker = this.scene.add
       .zone(
         -this.MENU_WIDTH / 2,
@@ -87,32 +44,100 @@ export class Market {
         ) => e.stopPropagation(),
       );
 
-    this.container.add([bg, marketBlocker, title, btnClose, this.tooltipText]);
+    // Фон — деревянная панель через nineslice под 512×336
+    const bg = this.scene.add.nineslice(
+      0,
+      0,
+      "ui_v2",
+      "woodButtonClear",
+      this.MENU_WIDTH,
+      this.MENU_HEIGHT,
+      70,
+      70,
+      70,
+      70,
+    );
+
+    // Баннер-заголовок (выступает за края панели сверху)
+    const banner = this.scene.add.image(
+      0,
+      -this.MENU_HEIGHT / 2 + 10,
+      "ui_v2",
+      "greenBanner1",
+    );
+    banner.setScale(0.55);
+
+    const title = this.scene.add
+      .text(0, -this.MENU_HEIGHT / 2 + 10, "МАГАЗИН УЛУЧШЕНИЙ", {
+        fontSize: "18px",
+        color: "#ffffff",
+        fontStyle: "bold",
+        stroke: "#1f3d1f",
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5);
+
+    // Кнопка закрытия (в правом верхнем углу внутри панели)
+    const btnClose = this.scene.add
+      .image(
+        this.MENU_WIDTH / 2 - 7,
+        -this.MENU_HEIGHT / 2 + 7,
+        "ui_v2",
+        "squareButtonWoodClose",
+      )
+      .setDisplaySize(36, 36)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => this.hide())
+      .on("pointerover", () => btnClose.setTint(0xdddddd))
+      .on("pointerout", () => btnClose.clearTint());
+
+    // Тултип
+    this.tooltipText = this.scene.add
+      .text(0, -this.MENU_HEIGHT / 2 - 35, "Наведите на товар", {
+        fontSize: "16px",
+        color: "#fff5e0",
+        align: "center",
+        backgroundColor: "#000000cc",
+        padding: { x: 12, y: 8 },
+        wordWrap: { width: this.MENU_WIDTH - 60 },
+      })
+      .setOrigin(0.5);
+    this.tooltipText.setStroke("#000000", 2);
+
+    this.container.add([
+      marketBlocker,
+      bg,
+      banner,
+      title,
+      btnClose,
+      this.tooltipText,
+    ]);
 
     const cols = 4;
+    const rows = 4;
     const cellSize = 48;
-    const spacingX = 100;
-    const spacingY = 70;
-    const startX = -160;
-    const startY = -100;
+    const spacingX = 90;
+    const spacingY = 56;
+    const startX = -((cols - 1) * spacingX) / 2;
+    const startY = -((rows - 1) * spacingY) / 2.25;
 
-    const itemIcons = [
-      "⚔️1",
-      "⚔️2",
-      "⚔️3",
-      "⚔️4",
-      "⚔️5",
-      "⚔️6",
-      "⚔️7",
-      "",
-      "🎫",
-      "",
-      "",
-      "",
-      "📈",
-      "💪",
-      "🎟️",
-      "🎲",
+    const itemFrames: (string | null)[] = [
+      "attackNormal",
+      "attackPiercing",
+      "attackSiege",
+      "attackMagic",
+      "attackHeroic",
+      "attackLight",
+      "attackDark",
+      null,
+      "ticket",
+      null,
+      null,
+      null,
+      "priceUp",
+      "attackUp",
+      "couponDiscount",
+      "couponReroll",
     ];
 
     for (let i = 0; i < 16; i++) {
@@ -122,28 +147,43 @@ export class Market {
       const slotY = startY + row * spacingY;
 
       const slotBg = this.scene.add.graphics();
-      slotBg.fillStyle(0x333333, 1);
-      slotBg.fillRect(
+      slotBg.fillStyle(0x2a1a0a, 0.7);
+      slotBg.fillRoundedRect(
         slotX - cellSize / 2,
         slotY - cellSize / 2,
         cellSize,
         cellSize,
+        6,
       );
-      slotBg.lineStyle(2, 0x777777);
-      slotBg.strokeRect(
+      slotBg.lineStyle(2, 0x8a5a2a, 0.9);
+      slotBg.strokeRoundedRect(
         slotX - cellSize / 2,
         slotY - cellSize / 2,
         cellSize,
         cellSize,
+        6,
       );
       this.container.add(slotBg);
 
-      if (itemIcons[i] !== "") {
-        const iconText = this.scene.add
-          .text(slotX, slotY, itemIcons[i], { fontSize: "20px" })
-          .setOrigin(0.5);
-        this.container.add(iconText);
-        this.setupMarketItem(i, slotX, slotY, cellSize, iconText);
+      // Деревянная рамка поверх заливки
+      const slotFrame = this.scene.add
+        .image(slotX, slotY, "ui_v2", "squareButtonWoodWithoutBg")
+        .setDisplaySize(cellSize + 2, cellSize + 2);
+      this.container.add(slotFrame);
+
+      const frameName = itemFrames[i];
+      if (frameName) {
+        const iconImg = this.scene.add.image(slotX, slotY, "icon", frameName);
+
+        const frame = this.scene.textures.getFrame("icon", frameName);
+        const maxDim = frame ? Math.max(frame.width, frame.height) : 128;
+        const baseScale = 40 / maxDim;
+
+        iconImg.setScale(baseScale);
+        iconImg.setData("baseScale", baseScale);
+
+        this.container.add(iconImg);
+        this.setupMarketItem(i, slotX, slotY, cellSize, iconImg, slotFrame);
       }
     }
   }
@@ -153,7 +193,8 @@ export class Market {
     x: number,
     y: number,
     size: number,
-    iconElement: Phaser.GameObjects.Text,
+    iconElement: Phaser.GameObjects.Image,
+    slotFrame: Phaser.GameObjects.Image,
   ) {
     const zone = this.scene.add
       .zone(x, y, size, size)
@@ -161,6 +202,8 @@ export class Market {
 
     let getTooltip = () => "";
     let buyAction = () => {};
+
+    const baseScale = iconElement.getData("baseScale") as number;
 
     if (index >= 0 && index <= 6) {
       const dmgType = index + 1;
@@ -191,7 +234,7 @@ export class Market {
         if (this.scene.economy.spendWood(40)) {
           this.scene.inventory.addItem("ticket", 1);
           this.scene.woodText.setText(`: ${this.scene.economy.wood}`);
-          this.scene.showNotification("🎫 Счастливый билет куплен!");
+          this.scene.showNotification("Счастливый билет куплен!");
         } else this.scene.showNotification("Недостаточно семян!");
       };
     } else if (index === 12) {
@@ -229,7 +272,7 @@ export class Market {
       };
     } else if (index === 15) {
       getTooltip = () =>
-        `🎲 Замена башни 6 ур на другую\nДает 2 заряда в инвентарь\nЦена: 1 медаль`;
+        `Замена башни 6 ур на другую\nДает 2 заряда в инвентарь\nЦена: 1 медаль`;
       buyAction = () => {
         if (this.scene.economy.spendMedals(1)) {
           this.scene.inventory.addItem("reroll", 2);
@@ -238,22 +281,25 @@ export class Market {
         } else this.scene.showNotification("Недостаточно медалей!");
       };
     }
-
     zone.on("pointerover", () => {
       this.tooltipText.setText(getTooltip());
+      slotFrame.setTint(0xdddddd);
+      this.scene.tweens.killTweensOf(iconElement);
       this.scene.tweens.add({
         targets: iconElement,
-        scale: 1.3,
+        scale: baseScale * 1.2,
         duration: 100,
         ease: "Sine.easeOut",
       });
     });
 
     zone.on("pointerout", () => {
-      this.tooltipText.setText("Наведите на товар для информации");
+      this.tooltipText.setText("Наведите на товар");
+      slotFrame.clearTint();
+      this.scene.tweens.killTweensOf(iconElement);
       this.scene.tweens.add({
         targets: iconElement,
-        scale: 1,
+        scale: baseScale,
         duration: 100,
         ease: "Sine.easeOut",
       });
@@ -270,9 +316,10 @@ export class Market {
         e.stopPropagation();
         buyAction();
         this.tooltipText.setText(getTooltip());
+        this.scene.tweens.killTweensOf(iconElement);
         this.scene.tweens.add({
           targets: iconElement,
-          scale: 0.9,
+          scale: baseScale * 0.9,
           duration: 50,
           yoyo: true,
         });
@@ -298,7 +345,8 @@ export class Market {
     if (!this.isVisible()) return false;
 
     const mCenterX = this.scene.scale.width / 2;
-    const mCenterY = this.scene.scale.height - this.MENU_HEIGHT / 1.8;
+    const mCenterY =
+      this.scene.scale.height - this.MENU_HEIGHT / 2 - this.MENU_BOTTOM_MARGIN;
 
     if (
       pixelX < mCenterX - this.MENU_WIDTH / 2 ||

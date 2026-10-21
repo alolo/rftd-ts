@@ -128,6 +128,13 @@ export class WaveController {
     const scene = this.scene;
     scene.waveManager.nextWave();
 
+    if (
+      !scene.achievements.hasEverLostLife &&
+      scene.waveManager.currentWaveIndex >= 35
+    ) {
+      scene.achievements.unlock("impenetrable_wall");
+    }
+
     if (!scene.achievements.baseHasTakenDamage) {
       scene.achievements.wavesPassedWithoutDamage++;
       if (scene.achievements.wavesPassedWithoutDamage >= 15)

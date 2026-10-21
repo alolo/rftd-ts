@@ -34,6 +34,8 @@ export class AchievementSystem {
 
   public soldTowersStats: Record<string, number> = {};
 
+  public hasEverLostLife: boolean = false;
+
   constructor(scene: MainScene) {
     this.scene = scene;
     this.initAchievements();
@@ -117,6 +119,14 @@ export class AchievementSystem {
         isSecret: false,
         isCompleted: false,
         rewardWood: 20,
+      },
+      {
+        id: "impenetrable_wall",
+        name: "Непреступная стена",
+        description: "Пройти 35 волн, не потеряв ни одной жизни",
+        isSecret: false,
+        isCompleted: false,
+        rewardWood: 40,
       },
       {
         id: "near_death",
@@ -344,6 +354,7 @@ export class AchievementSystem {
     this.soldTowersStats = {};
     this.baseHasTakenDamage = false;
     this.wavesPassedWithoutDamage = 0;
+    this.hasEverLostLife = false;
     this.hasUnseen = false;
 
     this.randomizeDailyTowers();

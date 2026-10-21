@@ -199,6 +199,7 @@ export class EnemyManager {
     this.scene.updatePlayerLivesText();
 
     this.scene.achievements.baseHasTakenDamage = true;
+    this.scene.achievements.hasEverLostLife = true;
 
     // ИСПРАВЛЕНО: раньше требовалось РОВНО 3 жизни.
     // Теперь срабатывает, если игрок ещё жив и у него <= 3 жизней.
