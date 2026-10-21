@@ -1451,6 +1451,7 @@ export class EnemyManager {
           this.scene.tweens.add({
             targets: blade,
             alpha: 0,
+            y: y + 30,
             duration: 300,
             ease: "Quad.easeIn",
             onComplete: () => blade.destroy(),
