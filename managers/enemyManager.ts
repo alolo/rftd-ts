@@ -1379,8 +1379,6 @@ export class EnemyManager {
       duration: 280,
       ease: "Quad.easeIn",
       onComplete: () => {
-        // Меч НЕ уничтожаем — он ещё 500мс торчит в земле
-
         // Вспышка
         const flash = this.scene.add.graphics().setPosition(x, y).setDepth(19);
         flash.fillStyle(0xffffff, 1);
