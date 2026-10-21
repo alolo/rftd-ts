@@ -1253,85 +1253,222 @@ export class EnemyManager {
   }
 
   public spawnHeroStrike(x: number, y: number, damage: number) {
-    const S = 1.6;
-    // ── 1. Меч падает сверху ──
-    const blade = this.scene.add.graphics().setDepth(19);
-    // Клинок
-    blade.fillStyle(0xdddddd, 0.95);
-    blade.fillRect(x - 3 * S, y - 230, 6 * S, 80 * S);
+    const S = 1;
 
-    // Блик
-    blade.fillStyle(0xffffff, 1);
-    blade.fillRect(x - 1 * S, y - 230, 2 * S, 80 * S);
+    // Пропорции
+    const bladeW = 14 * S; // ширина клинка (было 6!)
+    const bladeH = 100 * S; // длина клинка (без острия)
+    const tipH = 26 * S; // длина острия
+    const guardW = 44 * S; // ширина гарды
+    const guardH = 7 * S;
+    const gripW = 8 * S;
+    const gripH = 24 * S;
+
+    // Раскладка по Y (0,0 = остриё)
+    const bladeBodyTop = -(bladeH + tipH);
+    const guardTop = bladeBodyTop - guardH;
+    const gripTop = guardTop - gripH;
+    const pommelY = gripTop - 5 * S;
+
+    // ═══ МЕЧ ═══
+    const blade = this.scene.add.graphics();
+
+    // Клинок (сужается к острию — это ключ, почему не «пуля»)
+    blade.fillStyle(0xdddddd, 1);
+    blade.beginPath();
+    blade.moveTo(-bladeW / 2, bladeBodyTop);
+    blade.lineTo(bladeW / 2, bladeBodyTop);
+    blade.lineTo(bladeW * 0.35, bladeBodyTop + bladeH);
+    blade.lineTo(0, 0); // остриё
+    blade.lineTo(-bladeW * 0.35, bladeBodyTop + bladeH);
+    blade.closePath();
+    blade.fillPath();
+
+    // Правая грань (тёмная — объём)
+    blade.fillStyle(0x999999, 1);
+    blade.beginPath();
+    blade.moveTo(bladeW / 2, bladeBodyTop);
+    blade.lineTo(bladeW * 0.35, bladeBodyTop + bladeH);
+    blade.lineTo(0, 0);
+    blade.lineTo(0, bladeBodyTop + 4 * S);
+    blade.closePath();
+    blade.fillPath();
+
+    // Левая грань (светлая — блик)
+    blade.fillStyle(0xf5f5f5, 0.9);
+    blade.beginPath();
+    blade.moveTo(-bladeW / 2, bladeBodyTop);
+    blade.lineTo(-bladeW * 0.35, bladeBodyTop + bladeH);
+    blade.lineTo(0, 0);
+    blade.lineTo(0, bladeBodyTop + 4 * S);
+    blade.closePath();
+    blade.fillPath();
+
+    // Дол (центральная канавка)
+    blade.fillStyle(0x888888, 1);
+    blade.fillRect(-1.5 * S, bladeBodyTop + 4 * S, 3 * S, bladeH - 8 * S);
 
     // Гарда
     blade.fillStyle(0xffcc44, 1);
-    blade.fillRect(x - 10 * S, y - 152, 20 * S, 4 * S);
+    blade.fillRect(-guardW / 2, guardTop, guardW, guardH);
+    // Левый кончик гарды
+    blade.beginPath();
+    blade.moveTo(-guardW / 2, guardTop);
+    blade.lineTo(-guardW / 2 - 4 * S, guardTop + guardH / 2);
+    blade.lineTo(-guardW / 2, guardTop + guardH);
+    blade.closePath();
+    blade.fillPath();
+    // Правый кончик
+    blade.beginPath();
+    blade.moveTo(guardW / 2, guardTop);
+    blade.lineTo(guardW / 2 + 4 * S, guardTop + guardH / 2);
+    blade.lineTo(guardW / 2, guardTop + guardH);
+    blade.closePath();
+    blade.fillPath();
+    // Тень гарды
+    blade.fillStyle(0xaa8800, 1);
+    blade.fillRect(-guardW / 2, guardTop + guardH - 2 * S, guardW, 2 * S);
 
     // Рукоять
-    blade.fillStyle(0x663311, 1);
-    blade.fillRect(x - 2 * S, y - 148, 4 * S, 14 * S);
+    blade.fillStyle(0x5a2a0a, 1);
+    blade.fillRect(-gripW / 2, gripTop, gripW, gripH);
+    // Обмотка
+    blade.fillStyle(0x884422, 1);
+    for (let i = 0; i < 5; i++) {
+      blade.fillRect(
+        -gripW / 2,
+        gripTop + i * (gripH / 5) + 1.5 * S,
+        gripW,
+        1.5 * S,
+      );
+    }
 
     // Навершие
     blade.fillStyle(0xffcc44, 1);
-    blade.fillCircle(x, y - 132, 3 * S);
+    blade.fillCircle(0, pommelY, 5.5 * S);
+    blade.fillStyle(0xffee88, 1);
+    blade.fillCircle(-1.5 * S, pommelY - 1.5 * S, 2 * S);
 
-    // Падение + исчезновение
+    // ═══ СЛЕД (motion trail) ═══
+    const trail = this.scene.add.graphics();
+    trail.fillStyle(0xffcc44, 0.3);
+    trail.fillRect(
+      -bladeW / 2 - 2 * S,
+      bladeBodyTop - 120 * S,
+      bladeW + 4 * S,
+      120 * S,
+    );
+    trail.fillStyle(0xffcc44, 0.15);
+    trail.fillRect(
+      -bladeW / 2 - 6 * S,
+      bladeBodyTop - 180 * S,
+      bladeW + 12 * S,
+      60 * S,
+    );
+
+    // ═══ ПОЗИЦИЯ + НАКЛОН ═══
+    const startY = y - 260 * S;
+    blade.setPosition(x, startY).setDepth(19).setRotation(-0.12);
+    trail.setPosition(x, startY).setDepth(18).setRotation(-0.12);
+
+    // ═══ ПАДЕНИЕ ═══
     this.scene.tweens.add({
       targets: blade,
-      y: { from: y - 220, to: y }, // ← можно оставить (не зависит от S)
-      alpha: { from: 1, to: 0 },
-      duration: 200,
+      y: y + 20,
+      rotation: 0,
+      duration: 280,
       ease: "Quad.easeIn",
-      onComplete: () => blade.destroy(),
-    });
+      onComplete: () => {
+        // Меч НЕ уничтожаем — он ещё 500мс торчит в земле
 
-    // ── 2. Вспышка при ударе (через 200 мс, когда меч «долетел») ──
-    this.scene.time.delayedCall(200, () => {
-      const flash = this.scene.add.graphics().setPosition(x, y).setDepth(19);
-      flash.fillStyle(0xffffff, 1);
-      flash.fillCircle(0, 0, 20);
-      this.scene.tweens.add({
-        targets: flash,
-        scale: 2.5,
-        alpha: 0,
-        duration: 250,
-        ease: "Quad.easeOut",
-        onComplete: () => flash.destroy(),
-      });
+        // Вспышка
+        const flash = this.scene.add.graphics().setPosition(x, y).setDepth(19);
+        flash.fillStyle(0xffffff, 1);
+        flash.fillCircle(0, 0, 22 * S);
+        flash.fillStyle(0xffcc44, 0.6);
+        flash.fillCircle(0, 0, 38 * S);
+        this.scene.tweens.add({
+          targets: flash,
+          scale: 2.2,
+          alpha: 0,
+          duration: 300,
+          ease: "Quad.easeOut",
+          onComplete: () => flash.destroy(),
+        });
 
-      // ── 3. Текст с числом ──
-      const txt = this.scene.add
-        .text(x, y - 30, `+${damage}!`, {
-          fontSize: "26px",
-          color: "#fc3b3bff",
-          fontStyle: "bold",
-          stroke: "#000000",
-          strokeThickness: 5,
-        })
-        .setOrigin(0.5)
-        .setDepth(20)
-        .setScale(0);
-
-      this.scene.tweens.add({
-        targets: txt,
-        scale: 1,
-        duration: 180,
-        ease: "Back.easeOut",
-        onComplete: () => {
+        // Искры
+        for (let i = 0; i < 10; i++) {
+          const angle = (i / 10) * Math.PI * 2 + Math.random() * 0.4;
+          const spark = this.scene.add
+            .graphics()
+            .setPosition(x, y)
+            .setDepth(20);
+          spark.fillStyle(i % 2 ? 0xffdd44 : 0xffffff, 1);
+          spark.fillCircle(0, 0, 2 + Math.random() * 2);
           this.scene.tweens.add({
-            targets: txt,
-            y: y - 80,
+            targets: spark,
+            x: x + Math.cos(angle) * (40 + Math.random() * 35),
+            y: y + Math.sin(angle) * (35 + Math.random() * 30),
             alpha: 0,
-            duration: 700,
+            scale: 0.2,
+            duration: 400 + Math.random() * 250,
             ease: "Quad.easeOut",
-            onComplete: () => txt.destroy(),
+            onComplete: () => spark.destroy(),
           });
-        },
-      });
+        }
 
-      // ── 4. Лёгкая тряска камеры ──
-      this.scene.cameras.main.shake(80, 0.002);
+        // Текст
+        const txt = this.scene.add
+          .text(x, y - 40, `+${damage}!`, {
+            fontSize: "28px",
+            color: "#ffcc44",
+            fontStyle: "bold",
+            stroke: "#000000",
+            strokeThickness: 5,
+          })
+          .setOrigin(0.5)
+          .setDepth(20)
+          .setScale(0);
+        this.scene.tweens.add({
+          targets: txt,
+          scale: 1,
+          duration: 180,
+          ease: "Back.easeOut",
+          onComplete: () => {
+            this.scene.tweens.add({
+              targets: txt,
+              y: y - 90,
+              alpha: 0,
+              duration: 700,
+              ease: "Quad.easeOut",
+              onComplete: () => txt.destroy(),
+            });
+          },
+        });
+
+        this.scene.cameras.main.shake(90, 0.003);
+
+        // ═══ МЕЧ ТОРЧИТ 500мс, ПОТОМ РАСТВОРЯЕТСЯ ═══
+        this.scene.time.delayedCall(500, () => {
+          this.scene.tweens.add({
+            targets: blade,
+            alpha: 0,
+            duration: 300,
+            ease: "Quad.easeIn",
+            onComplete: () => blade.destroy(),
+          });
+        });
+      },
+    });
+    this.scene.time.delayedCall(500, () => {
+      this.scene.tweens.add({
+        targets: blade,
+        alpha: 0,
+        y: y + 30,
+        duration: 300,
+        ease: "Quad.easeIn",
+        onComplete: () => blade.destroy(),
+      });
     });
   }
 
