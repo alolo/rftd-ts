@@ -144,7 +144,7 @@ export class InteractionManager {
 
       if (this.multiSelectedTowers.length > 1) {
         this.scene.multiSelectText.setText(
-          `Выбрано одинаковых: ${this.multiSelectedTowers.length} шт.`,
+          `Выбрано одинаковых: ${this.multiSelectedTowers.length}`,
         );
       } else {
         this.scene.multiSelectText.setText("");
@@ -153,7 +153,7 @@ export class InteractionManager {
       // ИСПРАВЛЕНО: автосужение типов TypeScript без ручных кастов "as"
       if (currentTower instanceof Crop) {
         this.scene.sidePanel.showCrop(currentTower);
-        } else if (currentTower instanceof Tower) {
+      } else if (currentTower instanceof Tower) {
         this.scene.rangeCircle.clear();
         this.scene.rangeCircle.lineStyle(2, 0xffffff, 0.3);
         this.scene.rangeCircle.strokeCircle(
@@ -309,7 +309,7 @@ export class InteractionManager {
 
         if (this.multiSelectedTowers.length > 1) {
           this.scene.multiSelectText.setText(
-            `Выбрано одинаковых: ${this.multiSelectedTowers.length} шт.`,
+            `Выбрано одинаковых: ${this.multiSelectedTowers.length}`,
           );
         } else {
           this.scene.multiSelectText.setText("");

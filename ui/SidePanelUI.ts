@@ -38,7 +38,7 @@ export class SidePanelUI {
     const panelHeight = this.PANEL_HEIGHT;
     const centerX = this.scene.scale.width / 2;
     const centerY =
-    this.scene.scale.height - panelHeight / 2 - this.PANEL_BOTTOM_MARGIN;
+      this.scene.scale.height - panelHeight / 2 - this.PANEL_BOTTOM_MARGIN;
 
     this.container = this.scene.add
       .container(centerX, centerY)
@@ -80,7 +80,12 @@ export class SidePanelUI {
     this.towerIconGroup = this.scene.add.container(iconX, 0);
     this.container.add(this.towerIconGroup);
 
-    this.towerIconFrame = this.scene.add.image(0, 0, "ui_v2", "woodButtonClear");
+    this.towerIconFrame = this.scene.add.image(
+      0,
+      0,
+      "ui_v2",
+      "woodButtonClear",
+    );
     this.towerIconFrame.setDisplaySize(iconSize, iconSize);
     this.towerIconGroup.add(this.towerIconFrame);
 
@@ -121,14 +126,16 @@ export class SidePanelUI {
     this.container.add(this.towerInfoText);
 
     this.multiSelectText = this.scene.add
-      .text(textX, 125, "", {
-        fontSize: "15px",
+      .text(iconX, iconSize / 2 + 2, "", {
+        fontSize: "16px",
         color: "#00ffff",
         fontStyle: "bold",
         stroke: "#000000",
         strokeThickness: 2,
+        align: "center",
+        wordWrap: { width: iconSize + 40, useAdvancedWrap: true },
       })
-      .setOrigin(0, 0);
+      .setOrigin(0.5, 0);
     this.container.add(this.multiSelectText);
 
     // ПРАВЫЙ БЛОК: СЕТКА КНОПОК
@@ -310,8 +317,7 @@ export class SidePanelUI {
 
   private computePanelY(targetWorldY: number): number {
     const screenH = this.scene.scale.height;
-    const bottomY =
-      screenH - this.PANEL_HEIGHT / 2 - this.PANEL_BOTTOM_MARGIN;
+    const bottomY = screenH - this.PANEL_HEIGHT / 2 - this.PANEL_BOTTOM_MARGIN;
     const topY = this.PANEL_HEIGHT / 2 + this.PANEL_TOP_MARGIN;
     const bottomPanelTop = bottomY - this.PANEL_HEIGHT / 2;
 
@@ -495,9 +501,7 @@ export class SidePanelUI {
     const wavesLeft = Math.max(0, 2 - crop.wavesAlive);
 
     this.towerTitleText.setText(cropNames[crop.type] || "Грядка");
-    this.towerInfoText.setText(
-      `🌱 Созревание\nОсталось волн: ${wavesLeft}`,
-    );
+    this.towerInfoText.setText(`🌱 Созревание\nОсталось волн: ${wavesLeft}`);
     this.centerText();
 
     this.targetModeBtnText.setVisible(false);
@@ -589,8 +593,7 @@ export class SidePanelUI {
 
     const damageType = (stats as any).damageType || 1;
     const typeLvl = this.scene.economy.damageUpgrades[damageType] || 0;
-    const buffMultiplier =
-      typeLvl * 0.15 + this.scene.economy.globalDamageBuff;
+    const buffMultiplier = typeLvl * 0.15 + this.scene.economy.globalDamageBuff;
 
     const bonusMin =
       Math.floor(stats.minDamage * (1 + buffMultiplier)) - stats.minDamage;

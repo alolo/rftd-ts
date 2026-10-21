@@ -139,14 +139,14 @@ export class BuilderManager {
       this.scene.achievements.consecutiveSameTowers = 1;
     }
 
-    if (level === 6) {
-      const currentWave = this.scene.waveManager.currentWaveIndex + 1;
-      if (currentWave <= 13) {
-        this.scene.achievements.unlock("speedshooter");
-        this.scene.achievements.unlock("first_place");
-      } else if (currentWave <= 15) {
-        this.scene.achievements.unlock("first_place");
-      }
+    const currentWave = this.scene.waveManager.currentWaveIndex + 1;
+
+    if (level === 5 && currentWave <= 12) {
+      this.scene.achievements.unlock("speedshooter");
+    }
+
+    if (level === 6 && currentWave <= 15) {
+      this.scene.achievements.unlock("first_place");
     }
 
     this.updateAllAuras();

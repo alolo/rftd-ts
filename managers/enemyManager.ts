@@ -83,7 +83,9 @@ export class EnemyManager {
 
     const overlay = this.scene.add.graphics();
     overlay.setDepth(5);
-    overlay.enableFilters().filters!.external.addMask(this.scene.pathMaskSource);
+    overlay
+      .enableFilters()
+      .filters!.external.addMask(this.scene.pathMaskSource);
 
     const zoneType = this.classifyZoneColor(color, isBlackHole);
 
@@ -93,10 +95,19 @@ export class EnemyManager {
     }
 
     this.groundZones.push({
-      x, y, radius,
-      visualRadius: radius * this.VISUAL_PARTICLES_SCALE, 
-      duration, dmgPerSec, slowPct,
-      visual, overlay, damageType, isBlackHole, color, zoneType,
+      x,
+      y,
+      radius,
+      visualRadius: radius * this.VISUAL_PARTICLES_SCALE,
+      duration,
+      dmgPerSec,
+      slowPct,
+      visual,
+      overlay,
+      damageType,
+      isBlackHole,
+      color,
+      zoneType,
       particleTime: 0,
     });
   }
@@ -416,8 +427,12 @@ export class EnemyManager {
     const PARTICLES_PER_ARM = 6;
 
     const lerpColor = (a: number, b: number, k: number): number => {
-      const ar = (a >> 16) & 0xff, ag = (a >> 8) & 0xff, ab = a & 0xff;
-      const br = (b >> 16) & 0xff, bg = (b >> 8) & 0xff, bb = b & 0xff;
+      const ar = (a >> 16) & 0xff,
+        ag = (a >> 8) & 0xff,
+        ab = a & 0xff;
+      const br = (b >> 16) & 0xff,
+        bg = (b >> 8) & 0xff,
+        bb = b & 0xff;
       const r = Math.floor(ar + (br - ar) * k);
       const g = Math.floor(ag + (bg - ag) * k);
       const bl = Math.floor(ab + (bb - ab) * k);
@@ -511,78 +526,265 @@ export class EnemyManager {
       }
     }
   }
-  // ═══════════ ХЕЛПЕРЫ ДЛЯ СПОСОБНОСТЕЙ ═══════════
 
-/** Плавная волна по дороге: земля трескается → лава/вода в центре → затухание. */
-public spawnWaveVisual(
-  x: number, y: number, length: number, width: number, angle: number,
-  kind: "lava" | "water",
-) {
-  const isLava = kind === "lava";
-  const deepColor   = isLava ? 0x8b0000 : 0x0a3d6b;
-  const midColor    = isLava ? 0xff4400 : 0x2288cc;
-  const brightColor = isLava ? 0xffdd44 : 0xaaddff;
+  public spawnWaveVisual(
+    x: number,
+    y: number,
+    length: number,
+    width: number,
+    angle: number,
+    kind: "lava" | "water",
+  ) {
+    const isLava = kind === "lava";
 
-  const crack = this.scene.add.graphics().setPosition(x, y).setRotation(angle).setDepth(14);
+    const deepColor = isLava ? 0x5a0800 : 0x031a2e;
+    const midColor = isLava ? 0xc42e00 : 0x1560a0;
+    const brightColor = isLava ? 0xff6600 : 0x2288cc;
+    const crestColor = isLava ? 0xffaa00 : 0x88ccff;
+    const foamColor = isLava ? 0xffdd66 : 0xffffff;
 
-  const progress = { value: 0 };
-  this.scene.tweens.add({
-    targets: progress, value: 1, duration: 1000, ease: "Sine.easeOut",
-    onUpdate: () => {
-      const p = progress.value;
-      const len = length * (0.3 + p * 0.7);
-      const w = width * (0.15 + p * 0.85);
-      crack.clear();
-      crack.fillStyle(deepColor, 0.9);
-      crack.fillRect(0, -w / 2, len, w);
-      if (p > 0.3) {
-        crack.fillStyle(midColor, 0.7 * ((p - 0.3) / 0.7));
-        const bw = w * 0.6;
-        crack.fillRect(0, -bw / 2, len, bw);
+    const baseWidth = 6;
+    const maxWidth = width;
+    const SEGMENTS = 24;
+
+    const wave = this.scene.add.graphics().setPosition(x, y).setDepth(4);
+
+    const cosA = Math.cos(angle);
+    const sinA = Math.sin(angle);
+
+    const toWorld = (lx: number, ly: number): [number, number] => [
+      lx * cosA - ly * sinA,
+      lx * sinA + ly * cosA,
+    ];
+
+    // Стабильный «рваный» край (не мерцает)
+    const edgeNoise: number[] = [];
+    for (let i = 0; i <= SEGMENTS; i++) {
+      edgeNoise.push((Math.random() - 0.5) * 2);
+    }
+
+    // Пена: кружки, которые текут от башни вдоль потока
+    interface FoamParticle {
+      t0: number;
+      side: number;
+      speed: number;
+      size: number;
+    }
+    const foamParticles: FoamParticle[] = [];
+    for (let i = 0; i < 30; i++) {
+      foamParticles.push({
+        t0: Math.random() * 0.4,
+        side: (Math.random() - 0.5) * 1.8,
+        speed: 0.3 + Math.random() * 0.7,
+        size: 1.5 + Math.random() * 2.5,
+      });
+    }
+
+    let progress = 0;
+    let elapsed = 0;
+    let fading = false;
+    let timer: Phaser.Time.TimerEvent | null = null;
+
+    const fillPoly = (pts: [number, number][]) => {
+      if (pts.length < 3) return;
+      wave.beginPath();
+      const [sx, sy] = toWorld(pts[0][0], pts[0][1]);
+      wave.moveTo(sx, sy);
+      for (let i = 1; i < pts.length; i++) {
+        const [wx, wy] = toWorld(pts[i][0], pts[i][1]);
+        wave.lineTo(wx, wy);
       }
-      if (p > 0.5) {
-        crack.fillStyle(brightColor, 0.9 * ((p - 0.5) / 0.5));
-        const bw = w * 0.3;
-        crack.fillRect(0, -bw / 2, len * 0.9, bw);
-      }
-    },
-    onComplete: () => this.scene.tweens.add({
-      targets: crack, alpha: 0, duration: 600,
-      onComplete: () => crack.destroy(),
-    }),
-  });
+      wave.closePath();
+      wave.fillPath();
+    };
 
-  for (let i = 0; i < 14; i++) {
-    const t = (i + 0.5) / 14;
-    const wx = x + Math.cos(angle) * length * t;
-    const wy = y + Math.sin(angle) * length * t;
-    const particle = this.scene.add.graphics().setPosition(wx, wy).setDepth(17);
-    particle.fillStyle(brightColor, 1);
-    particle.fillCircle(0, 0, isLava ? 3 : 2.5);
-    this.scene.tweens.add({
-      targets: particle,
-      y: wy - (isLava ? 45 : 25),
-      alpha: 0,
-      duration: 600 + Math.random() * 400,
-      delay: t * 500,
-      ease: "Quad.easeOut",
-      onComplete: () => particle.destroy(),
+    const drawWave = () => {
+      wave.clear();
+      if (progress <= 0) return;
+
+      const alphaAt = (t: number) => {
+        if (t <= 0.7) return 1;
+        return Math.max(0, 1 - (t - 0.7) / 0.3);
+      };
+
+      // ── 1. Основа конуса с рваными краями ──
+      for (let i = 0; i < SEGMENTS; i++) {
+        const t1 = i / SEGMENTS;
+        const t2 = (i + 1) / SEGMENTS;
+        if (t1 >= progress) break;
+        const t2c = Math.min(t2, progress);
+
+        const w1 = baseWidth + (maxWidth - baseWidth) * t1;
+        const w2 = baseWidth + (maxWidth - baseWidth) * t2c;
+        const x1 = length * t1;
+        const x2 = length * t2c;
+
+        const a = alphaAt(t2c);
+        const e1 = w1 * 0.15 * edgeNoise[i];
+        const e2 = w2 * 0.15 * edgeNoise[i + 1];
+
+        wave.fillStyle(deepColor, a * 0.9);
+        fillPoly([
+          [x1, -w1 / 2 + e1],
+          [x2, -w2 / 2 + e2],
+          [x2, w2 / 2 + e2 * 0.5],
+          [x1, w1 / 2 + e1 * 0.5],
+        ]);
+
+        wave.fillStyle(midColor, a * 0.95);
+        fillPoly([
+          [x1, -w1 * 0.4 + e1 * 0.6],
+          [x2, -w2 * 0.4 + e2 * 0.6],
+          [x2, w2 * 0.4 - e2 * 0.3],
+          [x1, w1 * 0.4 - e1 * 0.3],
+        ]);
+
+        wave.fillStyle(brightColor, a * 0.7);
+        fillPoly([
+          [x1, -w1 * 0.4 + e1 * 0.6],
+          [x2, -w2 * 0.4 + e2 * 0.6],
+          [x2, -w2 * 0.1],
+          [x1, -w1 * 0.1],
+        ]);
+
+        wave.fillStyle(crestColor, a * 0.85);
+        fillPoly([
+          [x1, -w1 * 0.4 + e1 * 0.6],
+          [x2, -w2 * 0.4 + e2 * 0.6],
+          [x2, -w2 * 0.28],
+          [x1, -w1 * 0.28],
+        ]);
+      }
+
+      // ── 2. Круговые волны давления — расходятся от башни ──
+      // Главный маркер «вид сверху»: кольца на воде
+      const ringCount = 4;
+      for (let r = 0; r < ringCount; r++) {
+        const ringPhase = (elapsed * 0.0015 + r * 0.3) % 1;
+        if (ringPhase < 0.08) continue;
+
+        const ringCenterT = ringPhase * progress;
+        const ringRadius = ringPhase * maxWidth * 0.4;
+        const ringAlpha = (1 - ringPhase) * 0.6;
+        if (ringAlpha < 0.1) continue;
+
+        const cx = length * ringCenterT;
+
+        wave.lineStyle(2, crestColor, ringAlpha);
+        wave.beginPath();
+        const RING_SEGMENTS = 20;
+        for (let s = 0; s <= RING_SEGMENTS; s++) {
+          const theta = (s / RING_SEGMENTS) * Math.PI * 2;
+          const lx = cx + Math.cos(theta) * ringRadius;
+          const ly = Math.sin(theta) * ringRadius * 0.8;
+          const [wx, wy] = toWorld(lx, ly);
+          if (s === 0) wave.moveTo(wx, wy);
+          else wave.lineTo(wx, wy);
+        }
+        wave.strokePath();
+      }
+
+      // ── 3. Пена — кружки, текут вдоль потока ──
+      for (const fp of foamParticles) {
+        const foamT = (fp.t0 + elapsed * 0.001 * fp.speed) % 1;
+        if (foamT > progress || foamT < 0.05) continue;
+
+        const lx = length * foamT;
+        const wHere = baseWidth + (maxWidth - baseWidth) * foamT;
+        const ly = fp.side * wHere * 0.4 * 0.85;
+
+        const foamAlpha = Math.sin(foamT * Math.PI) * 0.8;
+        if (foamAlpha < 0.15) continue;
+
+        const [wx, wy] = toWorld(lx, ly);
+        wave.fillStyle(foamColor, foamAlpha);
+        wave.fillCircle(wx, wy, fp.size);
+      }
+
+      // ── 4. Рваный край — пузыри по периметру ──
+      for (let i = 1; i < SEGMENTS; i += 2) {
+        const t1 = i / SEGMENTS;
+        if (t1 >= progress) break;
+
+        const wHere = baseWidth + (maxWidth - baseWidth) * t1;
+        const xHere = length * t1;
+        const a = 0.7 * alphaAt(t1);
+        if (a < 0.15) continue;
+
+        const e = edgeNoise[i] * wHere * 0.12;
+
+        const r1 = 2 + (edgeNoise[i] + 1) * 1.5;
+        const [wx1, wy1] = toWorld(xHere, -wHere * 0.4 + e);
+        wave.fillStyle(foamColor, a * 0.7);
+        wave.fillCircle(wx1, wy1, r1);
+
+        const r2 = 2 + (edgeNoise[i] + 1) * 1.5;
+        const [wx2, wy2] = toWorld(xHere, wHere * 0.4 + e * 0.5);
+        wave.fillStyle(foamColor, a * 0.5);
+        wave.fillCircle(wx2, wy2, r2);
+      }
+    };
+
+    timer = this.scene.time.addEvent({
+      delay: 16,
+      loop: true,
+      callback: () => {
+        elapsed += 16;
+        if (!fading && progress < 1) progress = Math.min(1, progress + 0.06);
+
+        if (elapsed >= 700 && !fading) {
+          fading = true;
+          this.scene.tweens.add({
+            targets: wave,
+            alpha: 0,
+            duration: 500,
+            onComplete: () => {
+              if (timer) {
+                timer.destroy();
+                timer = null;
+              }
+              wave.destroy();
+            },
+          });
+        }
+        drawWave();
+      },
     });
+
+    // ── 5. Брызги при вылете ──
+    for (let i = 0; i < 8; i++) {
+      this.scene.time.delayedCall(100 + i * 40, () => {
+        const foamAngle = angle + (Math.random() - 0.5) * 0.8;
+        const foamDist = length * (0.5 + Math.random() * 0.4);
+        const foamX = x + Math.cos(foamAngle) * foamDist;
+        const foamY = y + Math.sin(foamAngle) * foamDist;
+
+        const foam = this.scene.add.graphics().setDepth(4);
+        foam.fillStyle(foamColor, 0.9);
+        foam.fillCircle(0, 0, 2 + Math.random() * 2);
+        foam.setPosition(foamX, foamY);
+
+        this.scene.tweens.add({
+          targets: foam,
+          x: foamX + Math.cos(foamAngle) * (15 + Math.random() * 20),
+          y: foamY + Math.sin(foamAngle) * (15 + Math.random() * 20),
+          alpha: { from: 0.9, to: 0 },
+          scale: 0.4,
+          duration: 400 + Math.random() * 200,
+          ease: "Quad.easeOut",
+          onComplete: () => foam.destroy(),
+        });
+      });
+    }
   }
 
-  const pool = this.scene.add.graphics().setPosition(x, y).setDepth(16);
-  pool.fillStyle(brightColor, 0.85);
-  pool.fillCircle(0, 0, width * 0.3);
-  pool.setScale(0);
-  this.scene.tweens.add({
-    targets: pool, scale: 1.4, alpha: 0,
-    duration: 1200, ease: "Quad.easeOut",
-    onComplete: () => pool.destroy(),
-  });
-}
-
-/** Трещины на земле от удара (Молот/Король гномов). */
-  public spawnGroundCrack(x: number, y: number, radius: number, kind: "hammer" | "gnome") {
+  /** Трещины на земле от удара (Молот/Король гномов). */
+  public spawnGroundCrack(
+    x: number,
+    y: number,
+    radius: number,
+    kind: "hammer" | "gnome",
+  ) {
     const isGnome = kind === "gnome";
     const color = isGnome ? 0x66ccff : 0xcc8844;
     const bright = isGnome ? 0xaaddff : 0xffcc66;
@@ -593,7 +795,10 @@ public spawnWaveVisual(
     flash.fillStyle(0xffffff, 0.95);
     flash.fillCircle(0, 0, radius * 0.6);
     this.scene.tweens.add({
-      targets: flash, scale: 1.6, alpha: 0, duration: 300,
+      targets: flash,
+      scale: 1.6,
+      alpha: 0,
+      duration: 300,
       onComplete: () => flash.destroy(),
     });
 
@@ -602,7 +807,10 @@ public spawnWaveVisual(
     ring.lineStyle(3, bright, 0.9);
     ring.strokeCircle(0, 0, radius * 0.6);
     this.scene.tweens.add({
-      targets: ring, scale: 2.5, alpha: 0, duration: 500,
+      targets: ring,
+      scale: 2.5,
+      alpha: 0,
+      duration: 500,
       onComplete: () => ring.destroy(),
     });
 
@@ -612,7 +820,8 @@ public spawnWaveVisual(
     const crackCount = 7 + Math.floor(Math.random() * 3); // 7–9 основных
 
     for (let i = 0; i < crackCount; i++) {
-      const baseAngle = (i / crackCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+      const baseAngle =
+        (i / crackCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
       const segments = 6 + Math.floor(Math.random() * 3); // 4–6 изломов
 
       let cx = Math.cos(baseAngle) * (4 + Math.random() * 8);
@@ -702,12 +911,15 @@ public spawnWaveVisual(
 
     // ── 6. Плавное затухание ──
     this.scene.tweens.add({
-      targets: cracks, alpha: 0, duration: 700, delay: 200,
+      targets: cracks,
+      alpha: 0,
+      duration: 700,
+      delay: 200,
       onComplete: () => cracks.destroy(),
     });
   }
 
-/** Разлёт снежинок (Глыба льда — 5 волн). */
+  /** Разлёт снежинок (Глыба льда — 5 волн). */
   public spawnSnowBurst(x: number, y: number, radius: number) {
     const FLAKE_COUNT = 36;
     const FLAKE_SIZE = 7; // длина луча (было 4)
@@ -722,10 +934,14 @@ public spawnWaveVisual(
 
       const s = FLAKE_SIZE;
       flake.beginPath();
-      flake.moveTo(-s, 0); flake.lineTo(s, 0);
-      flake.moveTo(0, -s); flake.lineTo(0, s);
-      flake.moveTo(-s * 0.7, -s * 0.7); flake.lineTo(s * 0.7, s * 0.7);
-      flake.moveTo(-s * 0.7, s * 0.7); flake.lineTo(s * 0.7, -s * 0.7);
+      flake.moveTo(-s, 0);
+      flake.lineTo(s, 0);
+      flake.moveTo(0, -s);
+      flake.lineTo(0, s);
+      flake.moveTo(-s * 0.7, -s * 0.7);
+      flake.lineTo(s * 0.7, s * 0.7);
+      flake.moveTo(-s * 0.7, s * 0.7);
+      flake.lineTo(s * 0.7, -s * 0.7);
       flake.strokePath();
 
       flake.fillStyle(0xffffff, 0.95);
@@ -733,142 +949,174 @@ public spawnWaveVisual(
 
       this.scene.tweens.add({
         targets: flake,
-        scale: 1.6, alpha: 0, angle: 180,
-        duration: 700, delay: i * 15,
+        scale: 1.6,
+        alpha: 0,
+        angle: 180,
+        duration: 700,
+        delay: i * 15,
         ease: "Quad.easeOut",
         onComplete: () => flake.destroy(),
       });
     }
   }
 
-/** Электричество расходится от башни (Шаровая молния). */
-public spawnElectricBurst(x: number, y: number, radius: number) {
-  const g = this.scene.add.graphics().setPosition(x, y).setDepth(16);
-  for (let i = 0; i < 6; i++) {
-    const angle = (i / 6) * Math.PI * 2 + Math.random() * 0.4;
-    const len = radius * (0.7 + Math.random() * 0.3);
-    g.lineStyle(2, 0x44ddff, 0.95);
-    g.beginPath();
-    g.moveTo(0, 0);
-    for (let s = 1; s <= 4; s++) {
-      const t = s / 4;
-      const jitter = (Math.random() - 0.5) * 15;
-      const nx = Math.cos(angle) * len * t + Math.cos(angle + Math.PI / 2) * jitter;
-      const ny = Math.sin(angle) * len * t + Math.sin(angle + Math.PI / 2) * jitter;
-      g.lineTo(nx, ny);
+  /** Электричество расходится от башни (Шаровая молния). */
+  public spawnElectricBurst(x: number, y: number, radius: number) {
+    const g = this.scene.add.graphics().setPosition(x, y).setDepth(16);
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2 + Math.random() * 0.4;
+      const len = radius * (0.7 + Math.random() * 0.3);
+      g.lineStyle(2, 0x44ddff, 0.95);
+      g.beginPath();
+      g.moveTo(0, 0);
+      for (let s = 1; s <= 4; s++) {
+        const t = s / 4;
+        const jitter = (Math.random() - 0.5) * 15;
+        const nx =
+          Math.cos(angle) * len * t + Math.cos(angle + Math.PI / 2) * jitter;
+        const ny =
+          Math.sin(angle) * len * t + Math.sin(angle + Math.PI / 2) * jitter;
+        g.lineTo(nx, ny);
+      }
+      g.strokePath();
     }
-    g.strokePath();
-  }
-  this.scene.tweens.add({
-    targets: g, alpha: 0, scale: 1.2, duration: 400,
-    onComplete: () => g.destroy(),
-  });
-}
-
-/** Взрыв пузыря крови (Король вампиров). */
-public spawnBloodBubble(x: number, y: number, radius: number) {
-  const bubble = this.scene.add.graphics().setPosition(x, y).setDepth(14);
-  bubble.fillStyle(0xaa0000, 0.9);
-  bubble.fillCircle(0, 0, radius * 0.3);
-  bubble.fillStyle(0xff2222, 0.7);
-  bubble.fillCircle(-radius * 0.1, -radius * 0.1, radius * 0.15);
-  this.scene.tweens.add({
-    targets: bubble, scale: 2, alpha: 0, duration: 700,
-    onComplete: () => bubble.destroy(),
-  });
-
-  for (let i = 0; i < 12; i++) {
-    const angle = (i / 12) * Math.PI * 2 + Math.random() * 0.3;
-    const dist = radius * (0.8 + Math.random() * 0.5);
-    const drop = this.scene.add.graphics().setPosition(x, y).setDepth(15);
-    drop.enableFilters().filters!.external.addMask(this.scene.pathMaskSource);
-    drop.fillStyle(0xdd0000, 1);
-    drop.fillCircle(0, 0, 3);
     this.scene.tweens.add({
-      targets: drop,
-      x: x + Math.cos(angle) * dist,
-      y: y + Math.sin(angle) * dist * 0.6,
-      alpha: 0, duration: 500 + Math.random() * 300,
-      ease: "Quad.easeOut",
-      onComplete: () => drop.destroy(),
+      targets: g,
+      alpha: 0,
+      scale: 1.2,
+      duration: 400,
+      onComplete: () => g.destroy(),
     });
   }
-}
 
-/** Луч от башни к мобу (Алтарь смерти). */
-public spawnBeam(x1: number, y1: number, x2: number, y2: number, color: number) {
-  const beam = this.scene.add.graphics().setDepth(16);
-  beam.lineStyle(4, color, 0.95);
-  beam.beginPath(); beam.moveTo(x1, y1); beam.lineTo(x2, y2); beam.strokePath();
-  this.scene.tweens.add({
-    targets: beam, alpha: 0, duration: 400,
-    onComplete: () => beam.destroy(),
-  });
-}
-
-/** Столб света над мобом (Король душ). */
-public spawnLightPillar(x: number, y: number, color: number = 0xffffcc) {
-  const pillar = this.scene.add.graphics().setPosition(x, y).setDepth(15);
-  pillar.fillStyle(color, 0.85);
-  pillar.fillRect(-15, -200, 30, 200);
-  pillar.fillStyle(0xffffff, 0.5);
-  pillar.fillRect(-5, -200, 10, 200);
-  this.scene.tweens.add({
-    targets: pillar, alpha: 0, scaleX: 1.6, duration: 500,
-    onComplete: () => pillar.destroy(),
-  });
-}
-
-/** Молния с неба в моба (Магическая статуя). */
-public spawnLightningStrike(x: number, y: number) {
-  const lightning = this.scene.add.graphics().setDepth(17);
-  const startX = x + (Math.random() - 0.5) * 20;
-  const startY = y - 220;
-  lightning.lineStyle(3, 0xffff44, 1);
-  lightning.beginPath();
-  lightning.moveTo(startX, startY);
-  for (let i = 1; i <= 6; i++) {
-    const t = i / 6;
-    lightning.lineTo(
-      startX + (x - startX) * t + (Math.random() - 0.5) * 20,
-      startY + (y - startY) * t,
-    );
-  }
-  lightning.strokePath();
-  this.scene.tweens.add({
-    targets: lightning, alpha: 0, duration: 300,
-    onComplete: () => lightning.destroy(),
-  });
-
-  const flash = this.scene.add.graphics().setPosition(x, y).setDepth(17);
-  flash.fillStyle(0xffffff, 1);
-  flash.fillCircle(0, 0, 16);
-  this.scene.tweens.add({
-    targets: flash, scale: 2, alpha: 0, duration: 300,
-    onComplete: () => flash.destroy(),
-  });
-}
-
-/** Разлёт капель крови (Высший демон). */
-public spawnBloodSplatter(x: number, y: number) {
-  for (let i = 0; i < 8; i++) {
-    const angle = (i / 8) * Math.PI * 2 + Math.random() * 0.5;
-    const dist = 30 + Math.random() * 30;
-    const drop = this.scene.add.graphics().setPosition(x, y).setDepth(17);
-    drop.fillStyle(0xcc0000, 1);
-    drop.fillCircle(0, 0, 2 + Math.random() * 2);
+  /** Взрыв пузыря крови (Король вампиров). */
+  public spawnBloodBubble(x: number, y: number, radius: number) {
+    const bubble = this.scene.add.graphics().setPosition(x, y).setDepth(14);
+    bubble.fillStyle(0xaa0000, 0.9);
+    bubble.fillCircle(0, 0, radius * 0.3);
+    bubble.fillStyle(0xff2222, 0.7);
+    bubble.fillCircle(-radius * 0.1, -radius * 0.1, radius * 0.15);
     this.scene.tweens.add({
-      targets: drop,
-      x: x + Math.cos(angle) * dist,
-      y: y + Math.sin(angle) * dist * 0.6,
-      alpha: 0, duration: 400 + Math.random() * 300,
-      ease: "Quad.easeOut",
-      onComplete: () => drop.destroy(),
+      targets: bubble,
+      scale: 2,
+      alpha: 0,
+      duration: 700,
+      onComplete: () => bubble.destroy(),
+    });
+
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2 + Math.random() * 0.3;
+      const dist = radius * (0.8 + Math.random() * 0.5);
+      const drop = this.scene.add.graphics().setPosition(x, y).setDepth(15);
+      drop.enableFilters().filters!.external.addMask(this.scene.pathMaskSource);
+      drop.fillStyle(0xdd0000, 1);
+      drop.fillCircle(0, 0, 3);
+      this.scene.tweens.add({
+        targets: drop,
+        x: x + Math.cos(angle) * dist,
+        y: y + Math.sin(angle) * dist * 0.6,
+        alpha: 0,
+        duration: 500 + Math.random() * 300,
+        ease: "Quad.easeOut",
+        onComplete: () => drop.destroy(),
+      });
+    }
+  }
+
+  /** Луч от башни к мобу (Алтарь смерти). */
+  public spawnBeam(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    color: number,
+  ) {
+    const beam = this.scene.add.graphics().setDepth(16);
+    beam.lineStyle(4, color, 0.95);
+    beam.beginPath();
+    beam.moveTo(x1, y1);
+    beam.lineTo(x2, y2);
+    beam.strokePath();
+    this.scene.tweens.add({
+      targets: beam,
+      alpha: 0,
+      duration: 400,
+      onComplete: () => beam.destroy(),
     });
   }
-}
 
-/** Корни оплетают моба (Мировое древо). */
+  /** Столб света над мобом (Король душ). */
+  public spawnLightPillar(x: number, y: number, color: number = 0xffffcc) {
+    const pillar = this.scene.add.graphics().setPosition(x, y).setDepth(15);
+    pillar.fillStyle(color, 0.85);
+    pillar.fillRect(-15, -200, 30, 200);
+    pillar.fillStyle(0xffffff, 0.5);
+    pillar.fillRect(-5, -200, 10, 200);
+    this.scene.tweens.add({
+      targets: pillar,
+      alpha: 0,
+      scaleX: 1.6,
+      duration: 500,
+      onComplete: () => pillar.destroy(),
+    });
+  }
+
+  /** Молния с неба в моба (Магическая статуя). */
+  public spawnLightningStrike(x: number, y: number) {
+    const lightning = this.scene.add.graphics().setDepth(17);
+    const startX = x + (Math.random() - 0.5) * 20;
+    const startY = y - 220;
+    lightning.lineStyle(3, 0xffff44, 1);
+    lightning.beginPath();
+    lightning.moveTo(startX, startY);
+    for (let i = 1; i <= 6; i++) {
+      const t = i / 6;
+      lightning.lineTo(
+        startX + (x - startX) * t + (Math.random() - 0.5) * 20,
+        startY + (y - startY) * t,
+      );
+    }
+    lightning.strokePath();
+    this.scene.tweens.add({
+      targets: lightning,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => lightning.destroy(),
+    });
+
+    const flash = this.scene.add.graphics().setPosition(x, y).setDepth(17);
+    flash.fillStyle(0xffffff, 1);
+    flash.fillCircle(0, 0, 16);
+    this.scene.tweens.add({
+      targets: flash,
+      scale: 2,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => flash.destroy(),
+    });
+  }
+
+  /** Разлёт капель крови (Высший демон). */
+  public spawnBloodSplatter(x: number, y: number) {
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2 + Math.random() * 0.5;
+      const dist = 30 + Math.random() * 30;
+      const drop = this.scene.add.graphics().setPosition(x, y).setDepth(17);
+      drop.fillStyle(0xcc0000, 1);
+      drop.fillCircle(0, 0, 2 + Math.random() * 2);
+      this.scene.tweens.add({
+        targets: drop,
+        x: x + Math.cos(angle) * dist,
+        y: y + Math.sin(angle) * dist * 0.6,
+        alpha: 0,
+        duration: 400 + Math.random() * 300,
+        ease: "Quad.easeOut",
+        onComplete: () => drop.destroy(),
+      });
+    }
+  }
+
+  /** Корни оплетают моба (Мировое древо). */
   public spawnRootEntangle(x: number, y: number, duration: number) {
     const ROOT_COUNT = 9;
     const SEGMENTS = 10;
@@ -892,7 +1140,7 @@ public spawnBloodSplatter(x: number, y: number) {
       rootData.push({
         baseAngle,
         endAngleOffset: (Math.random() - 0.5) * 1.0,
-        wobbleAmp: 5 + Math.random() * 4,     // сила змеиности
+        wobbleAmp: 5 + Math.random() * 4, // сила змеиности
         wobbleFreq: 3 + Math.random() * 1.5, // частота извивов
         phase: Math.random() * Math.PI * 2,
         thickness: 2.5 + Math.random() * 1.5,
@@ -973,8 +1221,7 @@ public spawnBloodSplatter(x: number, y: number) {
           for (let s = 2; s < maxIdx; s += 2) {
             const bp = points[s];
             const t = s / SEGMENTS;
-            const branchLen =
-              6 * (1 - t) * Math.min(1, (p - s / SEGMENTS) * 2);
+            const branchLen = 6 * (1 - t) * Math.min(1, (p - s / SEGMENTS) * 2);
             if (branchLen < 1) continue;
 
             const branchAngle =
@@ -1005,17 +1252,32 @@ public spawnBloodSplatter(x: number, y: number) {
     });
   }
 
-/** Текст урона над мобом (Рыцарь-Герой). */
-public spawnDamageText(x: number, y: number, text: string, color: string = "#ff3333") {
-  const txt = this.scene.add.text(x, y - 30, text, {
-    fontSize: "22px", color, fontStyle: "bold",
-    stroke: "#000000", strokeThickness: 4,
-  }).setOrigin(0.5).setDepth(20);
-  this.scene.tweens.add({
-    targets: txt, y: y - 70, alpha: 0, duration: 900, ease: "Power1",
-    onComplete: () => txt.destroy(),
-  });
-}
+  /** Текст урона над мобом (Рыцарь-Герой). */
+  public spawnDamageText(
+    x: number,
+    y: number,
+    text: string,
+    color: string = "#ff3333",
+  ) {
+    const txt = this.scene.add
+      .text(x, y - 30, text, {
+        fontSize: "22px",
+        color,
+        fontStyle: "bold",
+        stroke: "#000000",
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5)
+      .setDepth(20);
+    this.scene.tweens.add({
+      targets: txt,
+      y: y - 70,
+      alpha: 0,
+      duration: 900,
+      ease: "Power1",
+      onComplete: () => txt.destroy(),
+    });
+  }
   public spawnSoulCrit(x: number, y: number) {
     // 1. Фиолетовый столб света
     const pillar = this.scene.add.graphics().setPosition(x, y).setDepth(15);
@@ -1024,7 +1286,10 @@ public spawnDamageText(x: number, y: number, text: string, color: string = "#ff3
     pillar.fillStyle(0xffffff, 0.5);
     pillar.fillRect(-5, -200, 10, 200);
     this.scene.tweens.add({
-      targets: pillar, alpha: 0, scaleX: 1.6, duration: 600,
+      targets: pillar,
+      alpha: 0,
+      scaleX: 1.6,
+      duration: 600,
       onComplete: () => pillar.destroy(),
     });
 
@@ -1058,7 +1323,10 @@ public spawnDamageText(x: number, y: number, text: string, color: string = "#ff3
     flash.fillStyle(0xffffff, 0.95);
     flash.fillCircle(0, 0, 20);
     this.scene.tweens.add({
-      targets: flash, scale: 2, alpha: 0, duration: 300,
+      targets: flash,
+      scale: 2,
+      alpha: 0,
+      duration: 300,
       onComplete: () => flash.destroy(),
     });
   }

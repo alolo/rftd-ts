@@ -32,7 +32,7 @@ export class EconomyManager {
   public cropPriceBonus: number = 1.0;
 
   public readonly COST_CHEAP = 100;
-  public readonly COST_EXP = 850;
+  public readonly COST_EXP = 800;
 
   public readonly CROP_COST: Record<CropType, number> = {
     potato: 10,

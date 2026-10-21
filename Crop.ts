@@ -6,7 +6,7 @@ export class Crop {
   public wavesAlive: number = 0;
   public isCrop: boolean = true;
   public get centerY(): number {
-  return this.container.y;
+    return this.container.y;
   }
 
   private container: Phaser.GameObjects.Container;

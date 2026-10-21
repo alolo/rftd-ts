@@ -146,16 +146,23 @@ export class TopBarUI {
     const btnDefs: [string, () => void][] = [
       [
         "[I] Профиль",
-        () => this.scene.openMenu(this.scene.profileMenuVisible ? null : "profile"),
+        () =>
+          this.scene.openMenu(this.scene.profileMenuVisible ? null : "profile"),
       ],
       ["[ESC] Меню", () => this.scene.togglePause()],
       [
         "[B] Инвентарь",
-        () => this.scene.openMenu(this.scene.inventory.isVisible ? null : "inventory"),
+        () =>
+          this.scene.openMenu(
+            this.scene.inventory.isVisible ? null : "inventory",
+          ),
       ],
       [
         "[J] Достижения",
-        () => this.scene.openMenu(this.scene.achievementsMenuVisible ? null : "achievements"),
+        () =>
+          this.scene.openMenu(
+            this.scene.achievementsMenuVisible ? null : "achievements",
+          ),
       ],
     ];
 
@@ -358,6 +365,7 @@ export class TopBarUI {
     const speedBtn = this.scene.add
       .container(btnX, centerY + BTN_Y_OFFSET, [bg, this.speedText])
       .setSize(BTN_SIZE, BTN_SIZE)
+      .setDepth(21)
       .setInteractive({ useHandCursor: true })
       .on(
         "pointerdown",

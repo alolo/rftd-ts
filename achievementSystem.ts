@@ -96,7 +96,7 @@ export class AchievementSystem {
       {
         id: "great_start",
         name: "Отличное начало",
-        description: "Построить все уникальные башни 1-го уровня (7 шт.)",
+        description: "Построить все уникальные башни 1-го уровня (7)",
         isSecret: false,
         isCompleted: false,
         rewardWood: 20,
@@ -145,7 +145,7 @@ export class AchievementSystem {
       {
         id: "repeat_please",
         name: "Повторим?",
-        description: "Собрать все 7 уникальных башен 2-го уровня",
+        description: "Собрать все 7 уникальных башен 2-го уровня (7)",
         isSecret: false,
         isCompleted: false,
         rewardWood: 20,
@@ -181,15 +181,15 @@ export class AchievementSystem {
         description: "Построить башню 6-го уровня до 15-й волны",
         isSecret: false,
         isCompleted: false,
-        rewardWood: 20,
+        rewardWood: 40,
       },
       {
         id: "speedshooter",
         name: "Скорострел!",
-        description: "Построить башню 6-го уровня до 13-й волны",
+        description: "Построить башню 5-го уровня до 12-й волны",
         isSecret: false,
         isCompleted: false,
-        rewardWood: 40,
+        rewardWood: 20,
       },
       {
         id: "secret_1",
@@ -215,7 +215,7 @@ export class AchievementSystem {
       {
         id: "lets_fly",
         name: "Полетели?",
-        description: "Собрать все летающие башни",
+        description: "Собрать все летающие башни (5)",
         isSecret: false,
         isCompleted: false,
         rewardWood: 40,
@@ -230,7 +230,7 @@ export class AchievementSystem {
       {
         id: "sculptor",
         name: "Скульптор",
-        description: "Собрать на поле все статуи",
+        description: "Собрать на поле все статуи (2)",
         isSecret: false,
         isCompleted: false,
         rewardWood: 10,
@@ -245,7 +245,7 @@ export class AchievementSystem {
       {
         id: "otherworldly_voice",
         name: "Потусторонний голос",
-        description: "Собрать все призрачные башни",
+        description: "Собрать все призрачные башни (5)",
         isSecret: false,
         isCompleted: false,
         rewardWood: 50,
@@ -270,7 +270,7 @@ export class AchievementSystem {
         name: "Скрытый квест 2",
         description: "Продай одномоментно стак из 60+ овощей",
         isSecret: true,
-        secretHint: "Секретная торгорвая операция",
+        secretHint: "Столько копил и наконец продал",
         isCompleted: false,
         rewardWood: 30,
       },
