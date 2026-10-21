@@ -1458,16 +1458,6 @@ export class EnemyManager {
         });
       },
     });
-    this.scene.time.delayedCall(500, () => {
-      this.scene.tweens.add({
-        targets: blade,
-        alpha: 0,
-        y: y + 30,
-        duration: 300,
-        ease: "Quad.easeIn",
-        onComplete: () => blade.destroy(),
-      });
-    });
   }
 
   public spawnSoulCrit(x: number, y: number) {
