@@ -281,7 +281,7 @@ export class AchievementSystem {
         isSecret: true,
         secretHint: "Я получил мощь, которая и не снилась моему отцу!",
         isCompleted: false,
-        rewardWood: 20,
+        rewardWood: 40,
       },
       {
         id: "lucky_one",

@@ -653,7 +653,7 @@ export class SidePanelUI {
     }
 
     const statusText = enemy.isDead ? " ☠" : "";
-    this.towerTitleText.setText(`МОБ: ${enemy.displayName}${statusText}`);
+    this.towerTitleText.setText(`${enemy.displayName}${statusText}`);
 
     const resists = enemy.getResistances();
     const weakArr: string[] = [];

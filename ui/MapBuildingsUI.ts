@@ -75,7 +75,7 @@ export class MapBuildingsUI {
       });
     });
 
-    attachTooltip(this.scene, marketZone, "Рынок овощей");
+    attachTooltip(this.scene, marketZone, "Магазин улучшений");
 
     marketZone.on(
       "pointerdown",
@@ -116,7 +116,9 @@ export class MapBuildingsUI {
     const iScaleX = informerImg.scaleX;
     const iScaleY = informerImg.scaleY;
 
-    this.scene.add.container(0, 0, [this.informerAura, informerImg]).setDepth(2);
+    this.scene.add
+      .container(0, 0, [this.informerAura, informerImg])
+      .setDepth(2);
     const informerZone = this.scene.add
       .zone(ix, iy, 64, 64)
       .setOrigin(0, 0)
