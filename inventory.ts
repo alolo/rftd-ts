@@ -327,7 +327,7 @@ export class Inventory {
       const pricePerItem = this.economy.marketPrices[slot.type as CropType];
       const revenue = pricePerItem * slot.count;
 
-      if (slot.count >= 60 && slot.type !== "ticket") {
+      if (slot.count >= 50 && slot.type !== "ticket") {
         (this.scene as any).achievements.unlock("secret_2");
       }
 

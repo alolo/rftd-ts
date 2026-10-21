@@ -1252,32 +1252,89 @@ export class EnemyManager {
     });
   }
 
-  /** Текст урона над мобом (Рыцарь-Герой). */
-  public spawnDamageText(
-    x: number,
-    y: number,
-    text: string,
-    color: string = "#ff3333",
-  ) {
-    const txt = this.scene.add
-      .text(x, y - 30, text, {
-        fontSize: "22px",
-        color,
-        fontStyle: "bold",
-        stroke: "#000000",
-        strokeThickness: 4,
-      })
-      .setOrigin(0.5)
-      .setDepth(20);
+  public spawnHeroStrike(x: number, y: number, damage: number) {
+    const S = 1.6;
+    // ── 1. Меч падает сверху ──
+    const blade = this.scene.add.graphics().setDepth(19);
+    // Клинок
+    blade.fillStyle(0xdddddd, 0.95);
+    blade.fillRect(x - 3 * S, y - 230, 6 * S, 80 * S);
+
+    // Блик
+    blade.fillStyle(0xffffff, 1);
+    blade.fillRect(x - 1 * S, y - 230, 2 * S, 80 * S);
+
+    // Гарда
+    blade.fillStyle(0xffcc44, 1);
+    blade.fillRect(x - 10 * S, y - 152, 20 * S, 4 * S);
+
+    // Рукоять
+    blade.fillStyle(0x663311, 1);
+    blade.fillRect(x - 2 * S, y - 148, 4 * S, 14 * S);
+
+    // Навершие
+    blade.fillStyle(0xffcc44, 1);
+    blade.fillCircle(x, y - 132, 3 * S);
+
+    // Падение + исчезновение
     this.scene.tweens.add({
-      targets: txt,
-      y: y - 70,
-      alpha: 0,
-      duration: 900,
-      ease: "Power1",
-      onComplete: () => txt.destroy(),
+      targets: blade,
+      y: { from: y - 220, to: y }, // ← можно оставить (не зависит от S)
+      alpha: { from: 1, to: 0 },
+      duration: 200,
+      ease: "Quad.easeIn",
+      onComplete: () => blade.destroy(),
+    });
+
+    // ── 2. Вспышка при ударе (через 200 мс, когда меч «долетел») ──
+    this.scene.time.delayedCall(200, () => {
+      const flash = this.scene.add.graphics().setPosition(x, y).setDepth(19);
+      flash.fillStyle(0xffffff, 1);
+      flash.fillCircle(0, 0, 20);
+      this.scene.tweens.add({
+        targets: flash,
+        scale: 2.5,
+        alpha: 0,
+        duration: 250,
+        ease: "Quad.easeOut",
+        onComplete: () => flash.destroy(),
+      });
+
+      // ── 3. Текст с числом ──
+      const txt = this.scene.add
+        .text(x, y - 30, `+${damage}!`, {
+          fontSize: "26px",
+          color: "#fc3b3bff",
+          fontStyle: "bold",
+          stroke: "#000000",
+          strokeThickness: 5,
+        })
+        .setOrigin(0.5)
+        .setDepth(20)
+        .setScale(0);
+
+      this.scene.tweens.add({
+        targets: txt,
+        scale: 1,
+        duration: 180,
+        ease: "Back.easeOut",
+        onComplete: () => {
+          this.scene.tweens.add({
+            targets: txt,
+            y: y - 80,
+            alpha: 0,
+            duration: 700,
+            ease: "Quad.easeOut",
+            onComplete: () => txt.destroy(),
+          });
+        },
+      });
+
+      // ── 4. Лёгкая тряска камеры ──
+      this.scene.cameras.main.shake(80, 0.002);
     });
   }
+
   public spawnSoulCrit(x: number, y: number) {
     // 1. Фиолетовый столб света
     const pillar = this.scene.add.graphics().setPosition(x, y).setDepth(15);

@@ -680,8 +680,8 @@ export class SidePanelUI {
     this.towerInfoText.setText(
       `HP: ${displayHp} / ${enemy.maxHp}\n` +
         `Скорость: ${spdStr}\n` +
-        `Слабость: ${weakStr}\n` +
-        `Защита: ${resistStr}`,
+        `Уязвимость: ${weakStr}\n` +
+        `Сопротивление: ${resistStr}`,
     );
     this.centerText();
 

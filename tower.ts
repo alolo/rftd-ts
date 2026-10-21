@@ -1024,12 +1024,11 @@ export class Tower {
           0xff2222,
         );
       } else if (this.level === 6 && this.variant === 16) {
-        // Рыцарь-Герой — текст с числом
-        (this.scene as any).enemyManager.spawnDamageText(
+        // Рыцарь-Герой — меч падает с неба
+        (this.scene as any).enemyManager.spawnHeroStrike(
           target.x,
           target.y,
-          `+${bonus}!`,
-          "#ffcc44",
+          bonus,
         );
       } else {
         // Fallback — старый текст

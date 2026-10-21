@@ -268,7 +268,7 @@ export class AchievementSystem {
       {
         id: "secret_2",
         name: "Скрытый квест 2",
-        description: "Продай одномоментно стак из 60+ овощей",
+        description: "Продай одномоментно стак из 50+ овощей",
         isSecret: true,
         secretHint: "Столько копил и наконец продал",
         isCompleted: false,
@@ -303,11 +303,11 @@ export class AchievementSystem {
       {
         id: "slumdog_millionaire",
         name: "Миллионер из трущоб",
-        description: "Накопить 8000 золота",
+        description: "Накопить 6000 золота",
         isSecret: false,
         isCompleted: false,
         rewardWood: 50,
-        checkCondition: (sys, scene) => scene.economy.gold >= 8000,
+        checkCondition: (sys, scene) => scene.economy.gold >= 6000,
       },
     ];
   }
