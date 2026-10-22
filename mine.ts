@@ -33,9 +33,7 @@ export class Mine {
     bg.lineStyle(2, 0xff0000, 1);
     bg.strokeCircle(0, 0, 10);
 
-    const text = scene.add
-      .text(0, 0, "💣", { fontSize: "12px" })
-      .setOrigin(0.5);
+    const text = scene.add.text(0, 0, "", { fontSize: "12px" }).setOrigin(0.5);
 
     this.container = scene.add.container(x, y, [bg, text]);
     this.container.setDepth(3); // Под башнями и мобами (чтобы лежала на земле)
