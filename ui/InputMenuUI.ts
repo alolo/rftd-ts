@@ -159,8 +159,8 @@ export class InputMenuUI {
     const panel = this.scene.add.nineslice(
       centerX,
       centerY,
-      "ui",
-      "panel_brown.png",
+      "ui_v2",
+      "woodButtonClear",
       620,
       320,
       panelCorner,
@@ -212,11 +212,11 @@ export class InputMenuUI {
       textColor: string,
       onClick: () => void,
     ) => {
-      const btnCorner = 25;
+      const btnCorner = 1;
       const img = this.scene.add.nineslice(
         0,
         0,
-        "ui",
+        "ui_v2",
         frame,
         190,
         52,
@@ -266,16 +266,16 @@ export class InputMenuUI {
     this.btnConfirmInput = makeBtn(
       centerX - 110,
       centerY + 85,
-      "button_brown.png",
+      "lightButtonClear",
       "Принять",
-      "#aaffaa",
+      "#ffffffff",
       () => this.confirm(),
     );
 
     this.btnCancelInput = makeBtn(
       centerX + 110,
       centerY + 85,
-      "button_red.png",
+      "redButton",
       "Отмена",
       "#ffffff",
       () => this.cancel(),

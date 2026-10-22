@@ -19,7 +19,8 @@ export class ProfileMenuUI {
   }
 
   public show() {
-    if (this.scene.isGameOver || this.scene.waveManager.state === "menu") return;
+    if (this.scene.isGameOver || this.scene.waveManager.state === "menu")
+      return;
     this.updateStats();
     this.container.setVisible(true);
   }
@@ -66,15 +67,15 @@ export class ProfileMenuUI {
         ) => e.stopPropagation(),
       );
 
-    const panelWidth = 560;
-    const panelHeight = 480;
-    const panelCorner = 30;
+    const panelWidth = 630;
+    const panelHeight = 520;
+    const panelCorner = 60;
 
     const panel = this.scene.add.nineslice(
       centerX,
       centerY,
-      "ui",
-      "panel_brown.png",
+      "ui_v2",
+      "woodPanelMenu",
       panelWidth,
       panelHeight,
       panelCorner,
@@ -82,23 +83,22 @@ export class ProfileMenuUI {
       panelCorner,
       panelCorner,
     );
-    panel.setTint(0xc5c5c5);
 
     const banner = this.scene.add.image(
       centerX,
       centerY - panelHeight / 2 + 15,
-      "ui",
-      "banner_classic_curtain.png",
+      "ui_v2",
+      "bannerGreen",
     );
     banner.setScale(1.15);
 
     const title = createCurvedTitle(
       this.scene,
       centerX,
-      centerY - panelHeight / 2 + 8,
+      centerY - panelHeight / 2 + 19,
       "Профиль",
-      3000,
-      0.045,
+      1900,
+      0.1,
       false,
       "32px",
     );
@@ -122,14 +122,14 @@ export class ProfileMenuUI {
       textColor: string,
       onClick: () => void,
     ) => {
-      const btnCorner = 25;
+      const btnCorner = 1;
       const img = this.scene.add.nineslice(
         0,
         0,
-        "ui",
+        "ui_v2",
         frame,
-        220,
-        56,
+        210,
+        60,
         btnCorner,
         btnCorner,
         btnCorner,
@@ -176,7 +176,7 @@ export class ProfileMenuUI {
     const btnReset = makeBtn(
       centerX - 120,
       centerY + 160,
-      "button_red.png",
+      "redButton",
       "Сбросить",
       "#ffffff",
       () => this.scene.resetProfile(),
@@ -185,7 +185,7 @@ export class ProfileMenuUI {
     const btnClose = makeBtn(
       centerX + 120,
       centerY + 160,
-      "button_brown.png",
+      "lightButtonClear",
       "Закрыть",
       "#ffffff",
       () => this.scene.openMenu(null),

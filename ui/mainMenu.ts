@@ -86,11 +86,11 @@ export class MainMenu {
     onClick: () => void,
   ) {
     // 1. Создаем картинку из атласа
-    const corner = 30;
+    const corner = 1;
     const img = this.scene.add.nineslice(
       0,
       0, // X, Y
-      "ui",
+      "ui_v2",
       frame, // Атлас и имя кадра
       width,
       height, // Желаемая ширина и высота кнопки
@@ -176,33 +176,33 @@ export class MainMenu {
     const menuPanel = this.scene.add.nineslice(
       this.scene.scale.width / 2,
       515, // Ставим по центру, чуть ниже заголовка
-      "ui",
-      "panel_brown.png", // ⚠️ ВАЖНО: ВСТАВЬ СЮДА НАЗВАНИЕ ПОДЛОЖКИ ИЗ XML!
+      "ui_v2",
+      "woodPanelMenu",
       500,
-      600, // Ширина и высота этого окна
-      panelCorner,
-      panelCorner,
-      panelCorner,
-      panelCorner,
+      660, // Ширина и высота этого окна
+      panelCorner + 50,
+      panelCorner + 50,
+      panelCorner + 50,
+      panelCorner + 50,
     );
 
     // 3. БАННЕР ЗАГОЛОВКА
     const banner = this.scene.add.image(
       this.scene.scale.width / 2,
-      175,
-      "ui",
-      "banner_hanging.png",
+      205,
+      "ui_v2",
+      "blueBannerDetail",
     );
-    banner.setScale(1.35);
+    banner.setScale(1.2);
 
     const title = this.createCurvedTitle(
       this.scene.scale.width / 2,
-      180,
+      210,
       "Random Tower Defense",
-      3400, // Тот самый радиус, который ты подобрал
-      0.15, // Тот самый разброс
+      1400, // Тот самый радиус, который ты подобрал
+      0.34, // Тот самый разброс
       false, // Выгиб вниз (не радуга)
-      "42px",
+      "34px",
       "#FFFFFF",
       "#3d2817",
       8,
@@ -212,10 +212,10 @@ export class MainMenu {
     const btnNewGame = this.createButton(
       this.scene.scale.width / 2,
       310,
-      "button_red.png",
+      "redButton",
       "Начать новую игру",
-      360,
-      70,
+      350,
+      75,
       "28px",
       "#ffffff",
       () => {
@@ -226,9 +226,9 @@ export class MainMenu {
     const btnLoadGame = this.createButton(
       this.scene.scale.width / 2,
       395,
-      "button_brown.png",
+      "greenButton",
       "Загрузить игру",
-      300,
+      280,
       60,
       "24px",
       "#ffffff",
@@ -258,9 +258,9 @@ export class MainMenu {
     const btnHowToPlay = this.createButton(
       this.scene.scale.width / 2,
       480,
-      "button_grey.png",
+      "blueButton",
       "Как играть",
-      260,
+      280,
       60,
       "22px",
       "#ffffff",
@@ -272,7 +272,7 @@ export class MainMenu {
     const btnAchievements = this.createButton(
       this.scene.scale.width / 2,
       565,
-      "button_brown.png",
+      "lightButtonClear2",
       "Достижения",
       280,
       60,
@@ -286,10 +286,10 @@ export class MainMenu {
     const btnResetProfile = this.createButton(
       this.scene.scale.width / 2,
       650,
-      "button_red.png",
+      "redButton",
       "Сбросить профиль",
-      320,
-      55,
+      280,
+      60,
       "20px",
       "#ffffff",
       () => this.scene.resetProfile(),
@@ -298,9 +298,9 @@ export class MainMenu {
     const btnBugReport = this.createButton(
       this.scene.scale.width / 2,
       735,
-      "button_grey.png",
+      "violetButton",
       "Сообщить об ошибке",
-      320,
+      280,
       60,
       "20px",
       "#ffaaaa",
@@ -357,32 +357,32 @@ export class MainMenu {
     const menuPanel = this.scene.add.nineslice(
       this.scene.scale.width / 2,
       480,
-      "ui",
-      "panel_brown.png",
+      "ui_v2",
+      "woodPanelMenu",
       500,
-      750, // Сделали её повыше, чтобы влезли все 7 уровней сложности
-      panelCorner,
-      panelCorner,
-      panelCorner,
-      panelCorner,
+      750,
+      panelCorner + 50,
+      panelCorner + 50,
+      panelCorner + 50,
+      panelCorner + 50,
     );
 
     const banner = this.scene.add.image(
       this.scene.scale.width / 2,
       120,
-      "ui",
-      "banner_hanging.png",
+      "ui_v2",
+      "blueBannerDetail",
     );
     banner.setScale(1.1);
 
     const title = this.createCurvedTitle(
       this.scene.scale.width / 2,
-      125, // Y-координата (возможно, придется чуть сдвинуть вверх/вниз)
+      125,
       "Выберите сложность",
-      2800, // Радиус (сделал меньше, чтобы дуга была круче)
-      0.14, // Разброс букв (пошире)
-      false, // isRainbow = true (выгиб вверх)
-      "40px",
+      1500,
+      0.27,
+      false,
+      "32px",
       "#FFFFFF",
       "#3d2817",
       8,
@@ -399,49 +399,49 @@ export class MainMenu {
       gold: number;
     }[] = [
       {
-        name: "1. Легко (75% ХП)",
+        name: "Легко (75% ХП)",
         id: "easy",
         mult: 0.75,
         color: "#55ff55",
         gold: 500,
       },
       {
-        name: "2. Нормально (100% ХП)",
+        name: "Нормально (100% ХП)",
         id: "normal",
         mult: 1.0,
         color: "#ffffff",
         gold: 500,
       },
       {
-        name: "3. Сложно (125% ХП)",
+        name: "Сложно (125% ХП)",
         id: "hard",
         mult: 1.25,
         color: "#ffff55",
         gold: 600,
       },
       {
-        name: "4. Кошмар (150% ХП)",
+        name: "Кошмар (150% ХП)",
         id: "nightmare",
         mult: 1.5,
         color: "#ffaa00",
         gold: 700,
       },
       {
-        name: "5. Ад (200% ХП)",
+        name: "Ад (200% ХП)",
         id: "hell",
         mult: 2.0,
         color: "#ff5555",
         gold: 800,
       },
       {
-        name: "6. Экстрим (250% ХП)",
+        name: "Экстрим (250% ХП)",
         id: "extreme",
         mult: 2.5,
         color: "#cc0000",
         gold: 900,
       },
       {
-        name: "7. Режим богов (300% ХП)",
+        name: "Режим богов (300% ХП)",
         id: "god",
         mult: 3.0,
         color: "#ff00ff",
@@ -451,15 +451,14 @@ export class MainMenu {
 
     let startY = 230;
     difficulties.forEach((diff) => {
-      // Используем коричневые кнопки для меню сложности
       const btn = this.createButton(
         this.scene.scale.width / 2,
         startY,
-        "button_brown.png",
+        "lightButtonClear2",
         diff.name,
-        400,
-        60,
-        "26px",
+        320,
+        70,
+        "20px",
         diff.color,
         () => {
           this.difficultyMenuContainer.setVisible(false);
@@ -474,11 +473,11 @@ export class MainMenu {
     // Кнопка НАЗАД (используем красную кнопку с крестиком или обычную)
     const btnBack = this.createButton(
       this.scene.scale.width / 2,
-      startY + 20,
-      "button_red.png",
+      startY + 10,
+      "redButton",
       "НАЗАД",
       200,
-      50,
+      53,
       "22px",
       "#ffffff",
       () => {

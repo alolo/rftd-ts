@@ -33,15 +33,13 @@ export class GameOverMenuUI {
 
     const panelWidth = 530;
     const panelHeight = isVictory ? 530 : 380;
-    const panelCorner = 30;
-    const panelTexture = isVictory
-      ? "panel_brown.png"
-      : "panel_brown_damaged.png";
+    const panelCorner = 60;
+    const panelTexture = isVictory ? "woodPanelMenu" : "woodPanelMenuCracked";
 
     const panel = this.scene.add.nineslice(
       centerX,
       centerY,
-      "ui",
+      "ui_v2",
       panelTexture,
       panelWidth,
       panelHeight,
@@ -54,20 +52,20 @@ export class GameOverMenuUI {
     const banner = this.scene.add.image(
       centerX,
       centerY - panelHeight / 2 + 15,
-      "ui",
-      "banner_classic_curtain.png",
+      "ui_v2",
+      "redBannerNice",
     );
-    banner.setScale(1.15);
+    banner.setScale(1.1);
 
     const titleText = isVictory ? "Победа!" : "  Поражение...";
-    const spread = isVictory ? 0.06 : 0.12;
+    const spread = isVictory ? 0.1 : 0.22;
 
     const title = createCurvedTitle(
       this.scene,
       centerX,
-      centerY - panelHeight / 2 + 8,
+      centerY - panelHeight / 2 + 14,
       titleText,
-      2400,
+      1600,
       spread,
       false,
       "36px",
@@ -84,14 +82,14 @@ export class GameOverMenuUI {
       textColor: string,
       onClick: () => void,
     ) => {
-      const btnCorner = 25;
+      const btnCorner = 1;
       const img = this.scene.add.nineslice(
         0,
         0,
-        "ui",
+        "ui_v2",
         frame,
-        320,
-        56,
+        310,
+        70,
         btnCorner,
         btnCorner,
         btnCorner,
@@ -208,16 +206,16 @@ export class GameOverMenuUI {
           navigator.clipboard
             .writeText(saveCode)
             .then(() =>
-              this.scene.showNotification("📋 Код скопирован в буфер обмена!"),
+              this.scene.showNotification("Код скопирован в буфер обмена!"),
             )
-            .catch(() => this.scene.showNotification("❌ Ошибка копирования"));
+            .catch(() => this.scene.showNotification("Ошибка копирования"));
         },
       );
 
     const copyHint = this.scene.add
       .text(centerX, centerY - 28, "(нажмите на код, чтобы скопировать)", {
-        fontSize: "13px",
-        color: "#252525",
+        fontSize: "15px",
+        color: "#ffffffff",
         fontStyle: "italic",
       })
       .setOrigin(0.5);
@@ -225,7 +223,7 @@ export class GameOverMenuUI {
     const btnSaveTxt = makeBtn(
       centerX,
       centerY + 45,
-      "button_brown.png",
+      "greenButton",
       "Скачать сохранение",
       "#ffffff",
       () => this.downloadSaveFile(),
@@ -234,7 +232,7 @@ export class GameOverMenuUI {
     const btnRestart = makeBtn(
       centerX,
       centerY + 125,
-      "button_red.png",
+      "blueButton",
       "Начать заново",
       "#ffffff",
       () => this.scene.restartGame(),
@@ -276,8 +274,8 @@ export class GameOverMenuUI {
 
     const btnRestart = makeBtn(
       centerX,
-      centerY + 125,
-      "button_red.png",
+      centerY + 95,
+      "redButton",
       "Начать заново",
       "#ffffff",
       () => this.scene.restartGame(),

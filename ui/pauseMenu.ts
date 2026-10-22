@@ -72,11 +72,11 @@ export class PauseMenu {
     textColor: string,
     onClick: () => void,
   ) {
-    const corner = 30;
+    const corner = 1;
     const img = this.scene.add.nineslice(
       0,
       0,
-      "ui",
+      "ui_v2",
       frame,
       width,
       height,
@@ -162,33 +162,33 @@ export class PauseMenu {
     const menuPanel = this.scene.add.nineslice(
       centerX,
       480,
-      "ui",
-      "panel_brown.png",
+      "ui_v2",
+      "woodPanelMenu",
       480,
       560,
-      panelCorner,
-      panelCorner,
-      panelCorner,
-      panelCorner,
+      panelCorner + 20,
+      panelCorner + 20,
+      panelCorner + 20,
+      panelCorner + 20,
     );
 
     // 3. Баннер и заголовок
     const banner = this.scene.add.image(
       centerX,
       220,
-      "ui",
-      "banner_hanging.png",
+      "ui_v2",
+      "blueBannerDetail",
     );
-    banner.setScale(1.1);
+    banner.setScale(1);
 
     const title = this.createCurvedTitle(
       centerX,
       226, // Центр ленты по высоте
       "Пауза",
-      2400, // Радиус изгиба
-      0.05, // Компактный угол под 5 букв
+      1800, // Радиус изгиба
+      0.06, // Компактный угол под 5 букв
       false, // Арка куполом
-      "42px",
+      "40px",
       "#ffffff",
       "#000000",
       6,
@@ -209,10 +209,10 @@ export class PauseMenu {
     const btnContinue = this.createButton(
       centerX,
       355,
-      "button_red.png",
+      "redButton",
       "▶ Продолжить",
-      320,
-      65,
+      280,
+      60,
       "26px",
       "#ffffff",
       () => this.scene.togglePause(),
@@ -221,10 +221,10 @@ export class PauseMenu {
     const btnHowToPlay = this.createButton(
       centerX,
       435,
-      "button_grey.png",
+      "blueButton",
       "Как играть",
       280,
-      58,
+      60,
       "22px",
       "#ffffff",
       () => this.scene.showHowToPlay(),
@@ -233,10 +233,10 @@ export class PauseMenu {
     const btnAchievements = this.createButton(
       centerX,
       515,
-      "button_brown.png",
+      "lightButtonClear",
       "Достижения",
       280,
-      58,
+      60,
       "22px",
       "#ffd700",
       () => this.scene.showAchievementsMenu(),
@@ -245,10 +245,10 @@ export class PauseMenu {
     const btnRestart = this.createButton(
       centerX,
       595,
-      "button_grey.png",
+      "violetButton",
       "Начать заново",
-      300,
-      58,
+      280,
+      60,
       "20px",
       "#ffaaaa",
       () => this.scene.confirmRestart(),
@@ -257,10 +257,10 @@ export class PauseMenu {
     const btnResetProfile = this.createButton(
       centerX,
       670,
-      "button_red.png",
+      "redButton",
       "Сбросить профиль",
-      300,
-      55,
+      280,
+      60,
       "20px",
       "#ffffff",
       () => this.scene.resetProfile(),

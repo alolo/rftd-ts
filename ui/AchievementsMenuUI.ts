@@ -70,9 +70,9 @@ export class AchievementsMenuUI {
         .setOrigin(0, 0);
 
       const achDescText = this.scene.add
-        .text(x + 35, y + 24, desc, {
+        .text(x + 35, y + 26, desc, {
           fontSize: "14px",
-          color: "#bbaaaa",
+          color: "#ffffffff",
           fontStyle: "italic",
         })
         .setOrigin(0, 0);
@@ -104,14 +104,14 @@ export class AchievementsMenuUI {
       );
 
     const panelWidth = 1250;
-    const panelHeight = 740;
-    const panelCorner = 30;
+    const panelHeight = 750;
+    const panelCorner = 60;
 
     const panel = this.scene.add.nineslice(
       centerX,
       centerY,
-      "ui",
-      "panel_brown.png",
+      "ui_v2",
+      "woodPanelMenu",
       panelWidth,
       panelHeight,
       panelCorner,
@@ -119,51 +119,50 @@ export class AchievementsMenuUI {
       panelCorner,
       panelCorner,
     );
-    panel.setTint(0xc5c5c5);
 
     const banner = this.scene.add.image(
       centerX,
-      centerY - panelHeight / 2 + 12,
-      "ui",
-      "banner_classic_curtain.png",
+      centerY - panelHeight / 2 + 20,
+      "ui_v2",
+      "bannerGreen",
     );
-    banner.setScale(1.5, 1.2);
+    banner.setScale(1, 1);
 
     const title = createCurvedTitle(
       this.scene,
       centerX,
-      centerY - panelHeight / 2 + 4,
+      centerY - panelHeight / 2 + 20,
       "Достижения",
-      3800,
-      0.06,
+      1400,
+      0.14,
       false,
       "30px",
     );
 
-    const btnCorner = 25;
+    const btnCorner = 1;
     const btnImg = this.scene.add.nineslice(
       0,
       0,
-      "ui",
-      "button_red.png",
+      "ui_v2",
+      "redButton",
       280,
-      56,
+      60,
       btnCorner,
       btnCorner,
       btnCorner,
       btnCorner,
     );
     const btnLabel = this.scene.add
-      .text(0, 0, "✖ ЗАКРЫТЬ", {
+      .text(0, 0, "ЗАКРЫТЬ", {
         fontSize: "22px",
         color: "#ffffff",
         fontStyle: "bold",
         stroke: "#000000",
-        strokeThickness: 4,
+        strokeThickness: 3,
       })
       .setOrigin(0.5);
 
-    const btnClose = this.scene.add.container(centerX, centerY + 310, [
+    const btnClose = this.scene.add.container(centerX, centerY + 295, [
       btnImg,
       btnLabel,
     ]);

@@ -60,14 +60,14 @@ export class HowToPlayMenu {
     text: string,
     onClick: () => void,
   ) {
-    const btnCorner = 25;
+    const btnCorner = 1;
     const img = this.scene.add.nineslice(
       0,
       0,
-      "ui",
+      "ui_v2",
       frame,
-      280,
-      56,
+      229,
+      60,
       btnCorner,
       btnCorner,
       btnCorner,
@@ -136,38 +136,38 @@ export class HowToPlayMenu {
 
     // 2. Деревянная панель
     const panelWidth = 800;
-    const panelHeight = 740;
+    const panelHeight = 840;
     const panelCorner = 30;
 
     const panel = this.scene.add.nineslice(
       centerX,
       centerY,
-      "ui",
-      "panel_brown.png",
+      "ui_v2",
+      "woodPanelMenu",
       panelWidth,
       panelHeight,
-      panelCorner,
-      panelCorner,
-      panelCorner,
-      panelCorner,
+      panelCorner + 30,
+      panelCorner + 30,
+      panelCorner + 30,
+      panelCorner + 30,
     );
     panel.setTint(0xc5c5c5);
 
     // 3. Баннер и заголовок
     const banner = this.scene.add.image(
       centerX,
-      centerY - panelHeight / 2 + 2,
-      "ui",
-      "banner_classic_curtain.png",
+      centerY - panelHeight / 2 + 50,
+      "ui_v2",
+      "blueBannerDetail",
     );
-    banner.setScale(1.2);
+    banner.setScale(1.1);
 
     const title = this.createCurvedTitle(
       centerX,
-      centerY - panelHeight / 2 - 3,
+      centerY - panelHeight / 2 + 50,
       "Как играть",
-      3100,
-      0.08,
+      1600,
+      0.14,
       false,
       "36px",
     );
@@ -186,21 +186,21 @@ export class HowToPlayMenu {
       "10. Посадка овощей одного типа увеличит их базовую цену\n";
 
     const info = this.scene.add
-      .text(centerX, centerY - 15, rulesText, {
-        fontSize: "17px",
+      .text(centerX, centerY + 2, rulesText, {
+        fontSize: "18px",
         color: "#ffffff", // Приятный кремовый цвет текста
         align: "left",
-        lineSpacing: 11, // Побольше воздуха между пунктами
-        wordWrap: { width: 660, useAdvancedWrap: true },
+        lineSpacing: 8, // Побольше воздуха между пунктами
+        wordWrap: { width: 680, useAdvancedWrap: true },
       })
       .setOrigin(0.5);
 
     // 5. Кнопка закрытия
     const btnClose = this.createButton(
       centerX,
-      centerY + 300,
-      "button_red.png",
-      "✖ ПОНЯТНО",
+      centerY + 335,
+      "greenButton",
+      "ПОНЯТНО",
       () => {
         this.setVisible(false);
       },
