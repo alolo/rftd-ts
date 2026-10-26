@@ -135,14 +135,13 @@ export class LuckyTicket {
       2,
     );
 
-    // GlassPanel — фон для результата
     const glassW = 400;
     const glassH = 91;
     const glass = this.scene.add.nineslice(
       0,
       -30,
       "ui_v2",
-      "GlassPanel",
+      "glassPanelLight",
       glassW,
       glassH,
       60,
@@ -225,7 +224,7 @@ export class LuckyTicket {
           "Билеты (1 или 3 шт) — 3%\n" +
           "Неудача (Ничего) — 56%\n" +
           "Купон на 100% скидку — 4%\n" +
-          "Кубик замены башни — 4%\n" +
+          "Купон замены башни — 4%\n" +
           "Два случайных овоща — 8%",
         {
           fontSize: "14px",

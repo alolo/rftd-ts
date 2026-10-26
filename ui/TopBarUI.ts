@@ -36,7 +36,7 @@ export class TopBarUI {
         this.scene.scale.width / 2,
         20,
         "ui_v2",
-        "upPanelBar",
+        "buttonPanelLight",
         this.scene.scale.width + 160,
         80,
         64,
@@ -65,7 +65,7 @@ export class TopBarUI {
     } as const;
 
     const RESOURCE_CHIP_W = 180;
-    const RESOURCE_CHIP_H = 46;
+    const RESOURCE_CHIP_H = 44;
 
     const GLASS_L = 2;
     const GLASS_R = 2;
@@ -79,10 +79,10 @@ export class TopBarUI {
     ): Phaser.GameObjects.Text => {
       this.scene.add
         .nineslice(
-          slotX - 10,
-          CENTER_Y + 1,
+          slotX - 5,
+          CENTER_Y + 3,
           "ui_v2",
-          "GlassPanel",
+          "glassPanelLight",
           RESOURCE_CHIP_W,
           RESOURCE_CHIP_H,
           GLASS_L,
@@ -94,7 +94,7 @@ export class TopBarUI {
         .setDepth(19);
 
       this.scene.add
-        .image(slotX + 12, CENTER_Y, "icon", iconKey)
+        .image(slotX + 12, CENTER_Y + 3, "icon", iconKey)
         .setDisplaySize(ICON_SIZE, ICON_SIZE)
         .setOrigin(0, 0.5)
         .setDepth(20);
@@ -102,7 +102,7 @@ export class TopBarUI {
       return this.scene.add
         .text(
           slotX + 12 + ICON_SIZE + ICON_TEXT_GAP,
-          CENTER_Y,
+          CENTER_Y + 3,
           labelText,
           labelStyle,
         )

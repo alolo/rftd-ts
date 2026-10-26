@@ -40,14 +40,14 @@ export class BuilderManager {
     ) {
       finalCost = 0;
       this.scene.inventory.removeItem("coupon", 1);
-      this.scene.showNotification("🎟️ Использован купон из инвентаря!");
+      this.scene.showNotification("Использован купон из инвентаря!");
     } else if (
       cost >= this.scene.economy.COST_EXP &&
       this.scene.economy.freeTowerCharges > 0
     ) {
       finalCost = 0;
       this.scene.economy.freeTowerCharges--;
-      this.scene.showNotification("🎟️ Использован купон на 100% скидку!");
+      this.scene.showNotification("Использован купон на 100% скидку!");
     }
 
     if (finalCost > 0 && !this.scene.economy.spendGold(finalCost)) {
@@ -63,16 +63,16 @@ export class BuilderManager {
     if (level === 1) {
       if (roll <= 0.08) {
         finalLevel = 3;
-        this.scene.showNotification("🍀 Удача! Выпала башня 3-го уровня!");
+        this.scene.showNotification("Удача! Выпала башня 3-го уровня!");
       } else if (roll <= 0.16) {
         finalLevel = 2;
-        this.scene.showNotification("🍀 Удача! Выпала башня 2-го уровня!");
+        this.scene.showNotification("Удача! Выпала башня 2-го уровня!");
       }
     } else if (level >= 3) {
       if (roll <= 0.08) {
         finalLevel = level + 1;
         this.scene.showNotification(
-          `🍀 Удача! Выпала башня ${finalLevel}-го уровня!`,
+          `Удача! Выпала башня ${finalLevel}-го уровня!`,
         );
       }
     }
@@ -98,9 +98,9 @@ export class BuilderManager {
     this.scene.updateMarketUI();
 
     const cropNames: Record<string, string> = {
-      potato: "🥔 Картофель",
-      onion: "🧅 Лук",
-      pineapple: "🍍 Ананас",
+      potato: "Картофель",
+      onion: "Лук",
+      pineapple: "Ананас",
     };
     this.scene.showNotification(`${cropNames[type]} успешно посажен!`);
 
@@ -196,7 +196,7 @@ export class BuilderManager {
         this.scene.achievements.unlock("psycho");
     }
 
-    this.scene.showNotification(`💰 Башня продана за ${refund} золота`);
+    this.scene.showNotification(`Башня продана за ${refund} золота`);
     this.scene.interaction.deselectTower();
   }
 
@@ -207,13 +207,13 @@ export class BuilderManager {
         this.removeTower(col, row);
         const newVariant = Phaser.Math.Between(1, 21);
         this.buildTower(col, row, 6, newVariant);
-        this.scene.showNotification("🎲 Башня успешно заменена!");
+        this.scene.showNotification("Башня успешно заменена!");
 
         const pixelX = col * this.scene.CELL_SIZE + this.scene.CELL_SIZE / 2;
         const pixelY = row * this.scene.CELL_SIZE + this.scene.CELL_SIZE / 2;
         this.scene.interaction.handleGridClick(pixelX, pixelY);
       } else {
-        this.scene.showNotification("Нет кубиков замены!");
+        this.scene.showNotification("Нет купонов замены!");
       }
     }
   }

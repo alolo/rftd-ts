@@ -77,10 +77,10 @@ export class BugReportMenu {
     const title = createCurvedTitle(
       this.scene,
       0,
-      -this.MENU_HEIGHT / 2 + 22,
+      -this.MENU_HEIGHT / 2 + 30,
       "СООБЩИТЬ ОБ ОШИБКЕ",
-      1400,
-      0.24,
+      800,
+      0.36,
       false,
       "20px",
       "#ffffff",
