@@ -61,8 +61,8 @@ function generateWaves(): WaveConfig[] {
       enemyType: type,
       count: count,
       spawnInterval: interval,
-      prepTime: i === 1 ? 40 : 20,
-      postPause: 20,
+      prepTime: i === 1 ? 40 : 25,
+      postPause: 25,
       hpMultiplier: mult,
     });
   }
