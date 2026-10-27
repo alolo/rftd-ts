@@ -73,7 +73,7 @@ export class SidePanelUI {
       );
     this.container.add(blocker);
 
-    const iconSize = 110;
+    const iconSize = 120;
     const iconX = -panelWidth / 2 + 25 + iconSize / 2;
 
     this.towerIconGroup = this.scene.add.container(iconX, 0);
@@ -83,7 +83,7 @@ export class SidePanelUI {
       0,
       0,
       "ui_v2",
-      "woodButtonClear",
+      "squareWoodButtonClear",
     );
     this.towerIconFrame.setDisplaySize(iconSize, iconSize);
     this.towerIconGroup.add(this.towerIconFrame);
@@ -166,7 +166,7 @@ export class SidePanelUI {
     );
 
     this.abilityLabelText = this.scene.add
-      .text(0, 0, "✨ УМЕНИЕ (наведи)", {
+      .text(0, 0, "Умение (наведи)", {
         fontSize: "16px",
         color: "#ffd700",
         fontStyle: "bold",
@@ -493,9 +493,9 @@ export class SidePanelUI {
     }
 
     const cropNames: Record<string, string> = {
-      potato: "🥔 Картофель",
-      onion: "🧅 Лук",
-      pineapple: "🍍 Ананас",
+      potato: "Картофель",
+      onion: "Лук",
+      pineapple: "Ананас",
     };
     const wavesLeft = Math.max(0, 2 - crop.wavesAlive);
 
