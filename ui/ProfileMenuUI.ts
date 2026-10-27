@@ -39,7 +39,7 @@ export class ProfileMenuUI {
     this.statsText.setText(
       `Игрок: ${SaveSystem.nickname}\n\n` +
         `Текущий титул: ${titleName}\n` +
-        `Атака: +${buffPct}% | Замедление: -${buffPct}%\n` +
+        `Скорость атаки: +${buffPct}% | Замедление: -${buffPct}%\n` +
         `---------------------------------\n` +
         `${nextTitleInfo}`,
     );
