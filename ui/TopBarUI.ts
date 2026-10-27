@@ -37,12 +37,12 @@ export class TopBarUI {
         20,
         "ui_v2",
         "buttonPanelLight",
-        this.scene.scale.width + 160,
+        this.scene.scale.width + 200,
         80,
         64,
         64,
-        2,
-        2,
+        1,
+        1,
       )
       .setDepth(19)
       .setAlpha(0.9);
@@ -349,7 +349,7 @@ export class TopBarUI {
     const BTN_Y_OFFSET = 60;
 
     const bg = this.scene.add
-      .image(0, 0, "ui_v2", "squareButtonWoodClear")
+      .image(0, 0, "ui_v2", "squareWoodButtonClear")
       .setDisplaySize(BTN_SIZE, BTN_SIZE);
 
     this.speedText = this.scene.add

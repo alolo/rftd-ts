@@ -101,10 +101,10 @@ export class LuckyTicket {
       "woodPanelMenuCracked",
       width + 40,
       height + 20,
-      50,
-      50,
-      50,
-      50,
+      60,
+      60,
+      60,
+      60,
     );
 
     // Баннер-заголовок

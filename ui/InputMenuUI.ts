@@ -155,12 +155,12 @@ export class InputMenuUI {
         ) => e.stopPropagation(),
       );
 
-    const panelCorner = 30;
+    const panelCorner = 60;
     const panel = this.scene.add.nineslice(
       centerX,
       centerY,
       "ui_v2",
-      "woodButtonClear",
+      "woodPanelMenu",
       620,
       320,
       panelCorner,

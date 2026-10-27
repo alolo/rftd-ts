@@ -137,7 +137,7 @@ export class HowToPlayMenu {
     // 2. Деревянная панель
     const panelWidth = 800;
     const panelHeight = 840;
-    const panelCorner = 30;
+    const panelCorner = 60;
 
     const panel = this.scene.add.nineslice(
       centerX,
@@ -146,10 +146,10 @@ export class HowToPlayMenu {
       "woodPanelMenu",
       panelWidth,
       panelHeight,
-      panelCorner + 30,
-      panelCorner + 30,
-      panelCorner + 30,
-      panelCorner + 30,
+      panelCorner,
+      panelCorner,
+      panelCorner,
+      panelCorner,
     );
     panel.setTint(0xc5c5c5);
 

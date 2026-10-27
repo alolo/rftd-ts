@@ -17,11 +17,7 @@ export class ConfirmDialog {
     return this.container.visible;
   }
 
-  public show(
-    message: string,
-    onConfirm: () => void,
-    onCancel?: () => void,
-  ) {
+  public show(message: string, onConfirm: () => void, onCancel?: () => void) {
     this.messageText.setText(message);
     this.onConfirm = onConfirm;
     this.onCancel = onCancel || null;
@@ -72,14 +68,14 @@ export class ConfirmDialog {
     const panel = this.scene.add.nineslice(
       centerX,
       centerY,
-      "ui",
-      "panel_brown.png",
+      "ui_v2",
+      "woodPanelMenu",
       580,
       260,
-      30,
-      30,
-      30,
-      30,
+      60,
+      60,
+      60,
+      60,
     );
 
     this.messageText = this.scene.add
@@ -103,11 +99,11 @@ export class ConfirmDialog {
       color: string,
       onClick: () => void,
     ) => {
-      const btnCorner = 25;
+      const btnCorner = 1;
       const img = this.scene.add.nineslice(
         0,
         0,
-        "ui",
+        "ui_v2",
         frame,
         220,
         52,
@@ -156,8 +152,8 @@ export class ConfirmDialog {
 
     const btnYes = makeBtn(
       centerX - 115,
-      centerY + 70,
-      "button_brown.png",
+      centerY + 55,
+      "lightButtonClear",
       "Да",
       "#aaffaa",
       () => this.confirm(),
@@ -165,8 +161,8 @@ export class ConfirmDialog {
 
     const btnNo = makeBtn(
       centerX + 115,
-      centerY + 70,
-      "button_red.png",
+      centerY + 55,
+      "redButton",
       "Отмена",
       "#ffffff",
       () => this.cancel(),

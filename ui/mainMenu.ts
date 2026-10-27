@@ -172,7 +172,7 @@ export class MainMenu {
       );
 
     // 2. КРАСИВАЯ ПОДЛОЖКА (ФОН ДЛЯ КНОПОК)
-    const panelCorner = 30; // Углы для рамки подложки (можешь подкорректировать)
+    const panelCorner = 60;
     const menuPanel = this.scene.add.nineslice(
       this.scene.scale.width / 2,
       515, // Ставим по центру, чуть ниже заголовка
@@ -353,7 +353,7 @@ export class MainMenu {
       );
 
     // 2. Красивая подложка (вытянутая вниз под список)
-    const panelCorner = 30;
+    const panelCorner = 60;
     const menuPanel = this.scene.add.nineslice(
       this.scene.scale.width / 2,
       480,

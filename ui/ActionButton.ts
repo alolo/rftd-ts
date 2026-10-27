@@ -14,11 +14,11 @@ export class ActionButton {
     text: string,
     onClick: () => void,
   ) {
-    const corner = 30;
+    const corner = 1;
     const img = scene.add.nineslice(
       0,
       0,
-      "ui",
+      "ui_v2",
       frame,
       width,
       height,

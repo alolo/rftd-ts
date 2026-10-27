@@ -158,7 +158,7 @@ export class PauseMenu {
       );
 
     // 2. Деревянная подложка окна
-    const panelCorner = 30;
+    const panelCorner = 60;
     const menuPanel = this.scene.add.nineslice(
       centerX,
       480,

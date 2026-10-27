@@ -144,7 +144,7 @@ export class InteractionManager {
 
       if (this.multiSelectedTowers.length > 1) {
         this.scene.multiSelectText.setText(
-          `Выбрано одинаковых: ${this.multiSelectedTowers.length}`,
+          `Выбрано: ${this.multiSelectedTowers.length}`,
         );
       } else {
         this.scene.multiSelectText.setText("");
@@ -309,7 +309,7 @@ export class InteractionManager {
 
         if (this.multiSelectedTowers.length > 1) {
           this.scene.multiSelectText.setText(
-            `Выбрано одинаковых: ${this.multiSelectedTowers.length}`,
+            `Выбрано: ${this.multiSelectedTowers.length}`,
           );
         } else {
           this.scene.multiSelectText.setText("");

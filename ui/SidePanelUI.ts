@@ -138,8 +138,8 @@ export class SidePanelUI {
     this.container.add(this.multiSelectText);
 
     // ПРАВЫЙ БЛОК: СЕТКА КНОПОК
-    const btnW = 240;
-    const btnH = 48;
+    const btnW = 229;
+    const btnH = 60;
     const btnGapX = 10;
     const totalBtnW = btnW * 2 + btnGapX;
     const btnStartX = panelWidth / 2 - 25 - totalBtnW;
@@ -147,22 +147,22 @@ export class SidePanelUI {
     const col0X = btnStartX + btnW / 2;
     const col1X = btnStartX + btnW + btnGapX + btnW / 2;
 
-    const row0Y = -66;
+    const row0Y = -72;
     const row1Y = 0;
-    const row2Y = 66;
+    const row2Y = 72;
 
     // Умение
     const abilityBg = this.scene.add.nineslice(
       0,
       0,
-      "ui",
-      "button_brown.png",
+      "ui_v2",
+      "goldButtonNice",
       btnW,
       btnH,
-      30,
-      30,
-      30,
-      30,
+      1,
+      1,
+      1,
+      1,
     );
 
     this.abilityLabelText = this.scene.add
@@ -212,7 +212,7 @@ export class SidePanelUI {
       row1Y,
       btnW,
       btnH,
-      "button_red.png",
+      "redButton",
       "ПРОДАТЬ [S]",
       () => {
         if (this.scene.interaction.selectedCoords)
@@ -229,7 +229,7 @@ export class SidePanelUI {
       row2Y,
       btnW,
       btnH,
-      "button_brown.png",
+      "buttonPanelLight",
       "ЦЕЛЬ: ПЕРВЫЙ [Q]",
       () => this.scene.interaction.cycleTargetMode(),
     );
@@ -240,7 +240,7 @@ export class SidePanelUI {
       row0Y,
       btnW,
       btnH,
-      "button_brown.png",
+      "buttonPanelLight",
       "СЛИЯНИЕ [E]",
       () => this.scene.interaction.startTargetedMerge(),
     );
@@ -251,7 +251,7 @@ export class SidePanelUI {
       row1Y,
       btnW,
       btnH,
-      "button_brown.png",
+      "buttonPanelLight",
       "СЛИЯНИЕ СЛУЧ [W]",
       () => this.scene.interaction.doRandomMerge(),
     );
@@ -262,7 +262,7 @@ export class SidePanelUI {
       row2Y,
       btnW,
       btnH,
-      "button_brown.png",
+      "violetButton",
       "ЗАМЕНИТЬ [R]",
       () => {
         if (this.scene.interaction.selectedCoords)
@@ -579,14 +579,14 @@ export class SidePanelUI {
 
     if (tower.specialDesc) {
       this.abilityIcon.setVisible(true);
-      this.abilityLabelText.setText("СПОСОБНОСТЬ (наведи)");
+      this.abilityLabelText.setText("Умение (наведи)");
       this.abilityLabelText.setColor("#ffd700");
       this.abilityTooltip.setText(tower.specialDesc);
     } else {
       this.abilityIcon.setVisible(true);
-      this.abilityLabelText.setText("НЕТ СПОСОБНОСТИ");
+      this.abilityLabelText.setText("Нет умения");
       this.abilityLabelText.setColor("#ffffff");
-      this.abilityTooltip.setText("У этой башни нет особых способностей");
+      this.abilityTooltip.setText("У этой башни нет особых умений");
     }
   }
 
@@ -640,14 +640,14 @@ export class SidePanelUI {
 
     if ((stats as any).desc) {
       this.abilityIcon.setVisible(true);
-      this.abilityLabelText.setText("Способность (наведи)");
+      this.abilityLabelText.setText("умение (наведи)");
       this.abilityLabelText.setColor("#ffd700");
       this.abilityTooltip.setText((stats as any).desc);
     } else {
       this.abilityIcon.setVisible(true);
-      this.abilityLabelText.setText("Нет способности");
+      this.abilityLabelText.setText("Нет умения");
       this.abilityLabelText.setColor("#fdfdfd");
-      this.abilityTooltip.setText("У этой башни нет особых способностей");
+      this.abilityTooltip.setText("У этой башни нет особых умений");
     }
   }
 
