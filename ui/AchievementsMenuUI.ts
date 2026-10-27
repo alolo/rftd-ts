@@ -105,7 +105,7 @@ export class AchievementsMenuUI {
 
     const panelWidth = 1250;
     const panelHeight = 750;
-    const panelCorner = 60;
+    const panelCorner = 90;
 
     const panel = this.scene.add.nineslice(
       centerX,

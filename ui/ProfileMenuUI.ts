@@ -69,7 +69,7 @@ export class ProfileMenuUI {
 
     const panelWidth = 630;
     const panelHeight = 520;
-    const panelCorner = 60;
+    const panelCorner = 80;
 
     const panel = this.scene.add.nineslice(
       centerX,

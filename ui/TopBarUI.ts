@@ -137,10 +137,10 @@ export class TopBarUI {
     // --- ЦЕНТРАЛЬНЫЕ КНОПКИ ---
     const btnStyle = {
       fontSize: "16px",
-      color: "#3d2817",
+      color: "#000000ff",
       fontStyle: "bold",
-      stroke: "#fff5e0",
-      strokeThickness: 2,
+      stroke: "#ffe9c8ff",
+      strokeThickness: 1,
     } as const;
 
     const btnDefs: [string, () => void][] = [
