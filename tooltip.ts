@@ -124,18 +124,27 @@ export function attachTooltip(
     hideTooltip();
   });
 
-  // Тач
-  target.on("pointerdown", (p: Phaser.Input.Pointer) => {
-    if (!isTouchPointer(p)) return;
-    pressStartX = p.x;
-    pressStartY = p.y;
-    cancelLongPress();
-    longPressTimer = scene.time.delayedCall(LONG_PRESS_MS, () => {
-      longPressTimer = null;
-      const pos = computeTooltipPosition(target, p, position, true);
-      showTooltip(scene, pos.x, pos.y, resolveText());
-    });
-  });
+  target.on(
+    "pointerdown",
+    (
+      p: Phaser.Input.Pointer,
+      _lx: number,
+      _ly: number,
+      event: Phaser.Types.Input.EventData,
+    ) => {
+      if (!isTouchPointer(p)) return;
+      event.stopPropagation();
+
+      pressStartX = p.x;
+      pressStartY = p.y;
+      cancelLongPress();
+      longPressTimer = scene.time.delayedCall(LONG_PRESS_MS, () => {
+        longPressTimer = null;
+        const pos = computeTooltipPosition(target, p, position, true);
+        showTooltip(scene, pos.x, pos.y, resolveText());
+      });
+    },
+  );
   target.on("pointermove", (p: Phaser.Input.Pointer) => {
     if (!isTouchPointer(p) || !p.isDown) return;
     const dx = p.x - pressStartX;
@@ -200,23 +209,33 @@ export function attachTooltipWithAction(
   });
 
   // Клик/тап
-  target.on("pointerdown", (p: Phaser.Input.Pointer) => {
-    if (isTouchPointer(p)) {
-      pressStartX = p.x;
-      pressStartY = p.y;
-      longPressFired = false;
-      movedTooFar = false;
-      cancelLongPress();
-      longPressTimer = scene.time.delayedCall(LONG_PRESS_MS, () => {
-        longPressTimer = null;
-        longPressFired = true;
-        const pos = computeTooltipPosition(target, p, position, true);
-        showTooltip(scene, pos.x, pos.y, resolveText());
-      });
-    } else {
-      action();
-    }
-  });
+  target.on(
+    "pointerdown",
+    (
+      p: Phaser.Input.Pointer,
+      _lx: number,
+      _ly: number,
+      event: Phaser.Types.Input.EventData,
+    ) => {
+      event.stopPropagation();
+
+      if (isTouchPointer(p)) {
+        pressStartX = p.x;
+        pressStartY = p.y;
+        longPressFired = false;
+        movedTooFar = false;
+        cancelLongPress();
+        longPressTimer = scene.time.delayedCall(LONG_PRESS_MS, () => {
+          longPressTimer = null;
+          longPressFired = true;
+          const pos = computeTooltipPosition(target, p, position, true);
+          showTooltip(scene, pos.x, pos.y, resolveText());
+        });
+      } else {
+        action();
+      }
+    },
+  );
 
   target.on("pointermove", (p: Phaser.Input.Pointer) => {
     if (!isTouchPointer(p) || !p.isDown) return;
