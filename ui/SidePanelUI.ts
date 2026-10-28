@@ -4,6 +4,7 @@ import { Tower, TOWER_DICTIONARY } from "../tower";
 import { Crop } from "../Crop";
 import type { Enemy } from "../enemies/enemy";
 import { ActionButton } from "./ActionButton";
+import { attachTooltip } from "../tooltip";
 
 export class SidePanelUI {
   public container!: Phaser.GameObjects.Container;
@@ -14,7 +15,7 @@ export class SidePanelUI {
   public towerInfoText!: Phaser.GameObjects.Text;
   public multiSelectText!: Phaser.GameObjects.Text;
   public abilityIcon!: Phaser.GameObjects.Container;
-  public abilityTooltip!: Phaser.GameObjects.Text;
+  public abilityDescText: string = "";
   public abilityLabelText!: Phaser.GameObjects.Text;
   public targetModeBtnText!: ActionButton;
   public btnRandomMerge!: ActionButton;
@@ -183,26 +184,15 @@ export class SidePanelUI {
     this.abilityIcon.setInteractive({ useHandCursor: true });
     this.abilityIcon.setVisible(false);
 
-    this.abilityTooltip = this.scene.add
-      .text(0, 0, "", {
-        fontSize: "14px",
-        color: "#ffffff",
-        backgroundColor: "#111111",
-        padding: { x: 10, y: 8 },
-        wordWrap: { width: 340 },
-      })
-      .setOrigin(0.5, 1)
-      .setDepth(100)
-      .setVisible(false);
+    attachTooltip(this.scene, this.abilityIcon, () => this.abilityDescText, {
+      position: "above-target",
+    });
 
     this.abilityIcon.on("pointerover", () => {
-      this.abilityTooltip.setPosition(col0X, row0Y - btnH / 2 - 8);
-      this.abilityTooltip.setVisible(true);
       this.drawAbilityRange();
     });
 
     this.abilityIcon.on("pointerout", () => {
-      this.abilityTooltip.setVisible(false);
       this.scene.abilityRangeCircle.setVisible(false);
     });
 
@@ -280,7 +270,6 @@ export class SidePanelUI {
       this.btnSell.container,
       this.btnReroll.container,
       this.abilityIcon,
-      this.abilityTooltip,
     ]);
 
     // Крестик
@@ -460,7 +449,7 @@ export class SidePanelUI {
     this.btnSell.setVisible(false);
     this.btnReroll.setVisible(false);
     this.abilityIcon.setVisible(false);
-    this.abilityTooltip.setVisible(false);
+    this.abilityDescText = "";
     this.scene.abilityRangeCircle.setVisible(false);
     this.renderEnemyInfo(enemy);
   }
@@ -525,7 +514,7 @@ export class SidePanelUI {
     this.btnSell.setVisible(false);
     this.btnReroll.setVisible(false);
     this.abilityIcon.setVisible(false);
-    this.abilityTooltip.setVisible(false);
+    this.abilityDescText = "";
     this.scene.abilityRangeCircle.setVisible(false);
   }
 
@@ -581,12 +570,12 @@ export class SidePanelUI {
       this.abilityIcon.setVisible(true);
       this.abilityLabelText.setText("Умение (наведи)");
       this.abilityLabelText.setColor("#ffd700");
-      this.abilityTooltip.setText(tower.specialDesc);
+      this.abilityDescText = tower.specialDesc;
     } else {
       this.abilityIcon.setVisible(true);
-      this.abilityLabelText.setText("Нет умения");
+      this.abilityLabelText.setText("нет умений");
       this.abilityLabelText.setColor("#ffffff");
-      this.abilityTooltip.setText("У этой башни нет особых умений");
+      this.abilityDescText = "У этой башни нет особых способностей";
     }
   }
 
@@ -640,14 +629,14 @@ export class SidePanelUI {
 
     if ((stats as any).desc) {
       this.abilityIcon.setVisible(true);
-      this.abilityLabelText.setText("умение (наведи)");
+      this.abilityLabelText.setText("Умение (наведи)");
       this.abilityLabelText.setColor("#ffd700");
-      this.abilityTooltip.setText((stats as any).desc);
+      this.abilityDescText = (stats as any).desc;
     } else {
       this.abilityIcon.setVisible(true);
-      this.abilityLabelText.setText("Нет умения");
+      this.abilityLabelText.setText("Нет умений");
       this.abilityLabelText.setColor("#fdfdfd");
-      this.abilityTooltip.setText("У этой башни нет особых умений");
+      this.abilityDescText = "У этой башни нет особых способностей";
     }
   }
 
@@ -709,7 +698,7 @@ export class SidePanelUI {
     this.btnSell.setVisible(false);
     this.btnReroll.setVisible(false);
     this.abilityIcon.setVisible(false);
-    this.abilityTooltip.setVisible(false);
+    this.abilityDescText = "";
     this.scene.abilityRangeCircle.setVisible(false);
   }
 }

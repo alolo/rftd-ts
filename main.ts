@@ -158,9 +158,6 @@ export class MainScene extends Phaser.Scene {
   public get abilityIcon() {
     return this.sidePanel.abilityIcon;
   }
-  public get abilityTooltip() {
-    return this.sidePanel.abilityTooltip;
-  }
 
   public gameSpeed: number = 1;
   private gameTime: number = 0;

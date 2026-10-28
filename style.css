@@ -1,11 +1,12 @@
- /*@font-face {
+/*@font-face {
     font-family: 'GameFont';
     src: url('./fonts/fnt_dotumche.ttf') format('truetype');
     font-weight: 100 900;
     font-style: normal;
 } */
 
-body, html {
+body,
+html {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -22,4 +23,7 @@ canvas {
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }

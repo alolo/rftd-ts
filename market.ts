@@ -1,10 +1,10 @@
 import * as Phaser from "phaser";
 import type { MainScene } from "./main";
 import { Tower } from "./tower";
+import { attachTooltipWithAction } from "./tooltip";
 
 export class Market {
   public container!: Phaser.GameObjects.Container;
-  private tooltipText!: Phaser.GameObjects.Text;
 
   private readonly MENU_WIDTH = 512;
   private readonly MENU_HEIGHT = 336;
@@ -91,27 +91,7 @@ export class Market {
       .on("pointerover", () => btnClose.setTint(0xdddddd))
       .on("pointerout", () => btnClose.clearTint());
 
-    // Тултип
-    this.tooltipText = this.scene.add
-      .text(0, -this.MENU_HEIGHT / 2 - 35, "Наведите на товар", {
-        fontSize: "16px",
-        color: "#fff5e0",
-        align: "center",
-        backgroundColor: "#000000cc",
-        padding: { x: 12, y: 8 },
-        wordWrap: { width: this.MENU_WIDTH - 60 },
-      })
-      .setOrigin(0.5);
-    this.tooltipText.setStroke("#000000", 2);
-
-    this.container.add([
-      marketBlocker,
-      bg,
-      banner,
-      title,
-      btnClose,
-      this.tooltipText,
-    ]);
+    this.container.add([marketBlocker, bg, banner, title, btnClose]);
 
     const cols = 4;
     const rows = 4;
@@ -281,8 +261,26 @@ export class Market {
         } else this.scene.showNotification("Недостаточно медалей!");
       };
     }
+
+    attachTooltipWithAction(
+      this.scene,
+      zone,
+      getTooltip,
+      () => {
+        buyAction();
+        this.scene.tweens.killTweensOf(iconElement);
+        this.scene.tweens.add({
+          targets: iconElement,
+          scale: baseScale * 0.9,
+          duration: 50,
+          yoyo: true,
+        });
+      },
+      { position: "above-target" },
+    );
+
+    // Визуальный hover (tint + scale) — независимо от тултипа
     zone.on("pointerover", () => {
-      this.tooltipText.setText(getTooltip());
       slotFrame.setTint(0xdddddd);
       this.scene.tweens.killTweensOf(iconElement);
       this.scene.tweens.add({
@@ -292,9 +290,7 @@ export class Market {
         ease: "Sine.easeOut",
       });
     });
-
     zone.on("pointerout", () => {
-      this.tooltipText.setText("Наведите на товар");
       slotFrame.clearTint();
       this.scene.tweens.killTweensOf(iconElement);
       this.scene.tweens.add({
@@ -304,27 +300,6 @@ export class Market {
         ease: "Sine.easeOut",
       });
     });
-
-    zone.on(
-      "pointerdown",
-      (
-        p: Phaser.Input.Pointer,
-        x: number,
-        y: number,
-        e: Phaser.Types.Input.EventData,
-      ) => {
-        e.stopPropagation();
-        buyAction();
-        this.tooltipText.setText(getTooltip());
-        this.scene.tweens.killTweensOf(iconElement);
-        this.scene.tweens.add({
-          targets: iconElement,
-          scale: baseScale * 0.9,
-          duration: 50,
-          yoyo: true,
-        });
-      },
-    );
 
     this.container.add(zone);
   }

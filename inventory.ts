@@ -1,5 +1,6 @@
 import * as Phaser from "phaser";
 import { EconomyManager, type CropType } from "./economy";
+import { attachTooltipWithAction } from "./tooltip";
 
 export interface InventorySlot {
   type: ItemType | null;
@@ -44,7 +45,6 @@ export class Inventory {
   private sellText!: Phaser.GameObjects.Text;
   private pendingSellIndex: number | null = null;
   private sellIcon!: Phaser.GameObjects.Image;
-  private itemTooltip!: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene, economy: EconomyManager) {
     this.scene = scene;
@@ -189,78 +189,55 @@ export class Inventory {
 
       const slotZone = this.scene.add
         .zone(slotX, slotY, 48, 48)
-        .setInteractive({ useHandCursor: true })
-        .on(
-          "pointerdown",
-          (
-            pointer: Phaser.Input.Pointer,
-            localX: number,
-            localY: number,
-            event: Phaser.Types.Input.EventData,
-          ) => {
-            event.stopPropagation();
-            this.onSlotClick(i);
-          },
-        )
-        .on("pointerover", () => {
+        .setInteractive({ useHandCursor: true });
+
+      // Тултип + безопасное действие (long-press на тач НЕ продаёт/открывает)
+      attachTooltipWithAction(
+        this.scene,
+        slotZone,
+        () => {
           const slot = this.slots[i];
-          if (!slot || !slot.type) return;
+          return slot && slot.type ? ITEM_DESCRIPTIONS[slot.type] || "" : "";
+        },
+        () => this.onSlotClick(i),
+        { position: "above-target" },
+      );
 
-          slotFrame.setTint(0xdddddd);
+      // Визуальный hover
+      slotZone.on("pointerover", () => {
+        const slot = this.slots[i];
+        if (!slot || !slot.type) return;
 
-          // Тултип
-          this.itemTooltip.setText(
-            ITEM_DESCRIPTIONS[slot.type] || "Неизвестный предмет",
-          );
-          this.itemTooltip.setPosition(slotX, slotY - 40);
-          this.itemTooltip.setVisible(true);
+        slotFrame.setTint(0xdddddd);
 
-          // Hover-увеличение иконки
-          const iconImg = this.slotVisuals[i].icon;
-          const baseScale = iconImg.getData("baseScale") as number;
-          this.scene.tweens.killTweensOf(iconImg);
-          this.scene.tweens.add({
-            targets: iconImg,
-            scale: baseScale * 1.2,
-            duration: 100,
-            ease: "Sine.easeOut",
-          });
-        })
-        .on("pointerout", () => {
-          this.itemTooltip.setVisible(false);
-
-          slotFrame.clearTint();
-
-          const iconImg = this.slotVisuals[i].icon;
-          const baseScale = iconImg.getData("baseScale") as number;
-          this.scene.tweens.killTweensOf(iconImg);
-          this.scene.tweens.add({
-            targets: iconImg,
-            scale: baseScale,
-            duration: 100,
-            ease: "Sine.easeOut",
-          });
+        const iconImg = this.slotVisuals[i].icon;
+        const baseScale = iconImg.getData("baseScale") as number;
+        this.scene.tweens.killTweensOf(iconImg);
+        this.scene.tweens.add({
+          targets: iconImg,
+          scale: baseScale * 1.2,
+          duration: 100,
+          ease: "Sine.easeOut",
         });
+      });
+
+      slotZone.on("pointerout", () => {
+        slotFrame.clearTint();
+
+        const iconImg = this.slotVisuals[i].icon;
+        const baseScale = iconImg.getData("baseScale") as number;
+        this.scene.tweens.killTweensOf(iconImg);
+        this.scene.tweens.add({
+          targets: iconImg,
+          scale: baseScale,
+          duration: 100,
+          ease: "Sine.easeOut",
+        });
+      });
 
       this.container.add([slotBg, slotFrame, icon, countText, slotZone]);
       this.slotVisuals.push({ icon, text: countText });
     }
-
-    this.itemTooltip = this.scene.add
-      .text(0, 0, "", {
-        fontSize: "18px",
-        color: "#ffffff",
-        backgroundColor: "#000000ee",
-        padding: { x: 10, y: 10 },
-        align: "center",
-      })
-      .setOrigin(0.5, 1)
-      .setVisible(false)
-      .setDepth(300);
-
-    this.itemTooltip.setStroke("#ffffff", 0.5);
-
-    this.container.add(this.itemTooltip);
 
     this.sellMenuContainer = this.scene.add
       .container(0, 0)
@@ -376,7 +353,6 @@ export class Inventory {
   }
 
   private onSlotClick(index: number) {
-    this.itemTooltip.setVisible(false);
     const slot = this.slots[index];
 
     if (slot && slot.type === "ticket") {
