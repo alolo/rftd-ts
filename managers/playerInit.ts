@@ -5,16 +5,16 @@ export function initializePlayer(scene: MainScene) {
   if (!SaveSystem.loadNickname()) {
     scene.mainMenu.setVisible(false);
     scene.showInputMenu(
-      "Придумайте Никнейм (до 12 букв):",
+      "Придумайте Никнейм (2-12 букв):",
       12,
       (nick) => {
-        const finalNick = nick.trim() || "Player";
-        SaveSystem.setNickname(finalNick);
+        SaveSystem.setNickname(nick);
         const savedCode = localStorage.getItem("td_save_code");
         if (savedCode) scene.metaProgress.applyCode(savedCode);
         scene.mainMenu.setVisible(true);
       },
       false,
+      2,
     );
   } else {
     const savedCode = localStorage.getItem("td_save_code");

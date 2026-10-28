@@ -251,6 +251,7 @@ export class MainMenu {
             }
           },
           true,
+          18,
         );
       },
     );

@@ -11,6 +11,7 @@ export class InputMenuUI {
 
   private currentInputText: string = "";
   private maxInputLength: number = 16;
+  private minInputLength: number = 0;
   private isSelectedAll: boolean = false;
   private onInputConfirm: ((text: string) => void) | null = null;
   private hiddenInput!: HTMLInputElement;
@@ -29,6 +30,7 @@ export class InputMenuUI {
     maxLength: number,
     onConfirm: (text: string) => void,
     allowCancel: boolean,
+    minLength: number = 0,
   ) {
     this.currentInputText = "";
     this.maxInputLength = maxLength;
@@ -57,7 +59,22 @@ export class InputMenuUI {
 
   private confirm() {
     if (!this.container.visible) return;
-    const text = this.currentInputText;
+
+    const trimmed = this.currentInputText.trim();
+    if (trimmed.length < this.minInputLength) {
+      const n = this.minInputLength;
+      const lastDigit = n % 10;
+      const lastTwo = n % 100;
+      let word = "символов";
+      if (lastTwo < 10 || lastTwo >= 20) {
+        if (lastDigit === 1) word = "символ";
+        else if (lastDigit >= 2 && lastDigit <= 4) word = "символа";
+      }
+      this.scene.showNotification(`Минимум ${n} ${word}`);
+      return;
+    }
+
+    const text = trimmed;
     const cb = this.onInputConfirm;
     this.blurHiddenInput();
     this.container.setVisible(false);

@@ -486,8 +486,9 @@ export class MainScene extends Phaser.Scene {
     maxLength: number,
     onConfirm: (text: string) => void,
     allowCancel: boolean,
+    minLength: number = 0,
   ) {
-    this.inputMenu.show(title, maxLength, onConfirm, allowCancel);
+    this.inputMenu.show(title, maxLength, onConfirm, allowCancel, minLength);
   }
 
   public startGame(
