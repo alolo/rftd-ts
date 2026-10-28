@@ -155,27 +155,34 @@ export class Inventory {
     const startX = -150;
     const startY = -58;
 
+    const allSlotBg = this.scene.add.graphics();
+    const slotFrames: Phaser.GameObjects.Image[] = [];
+    const icons: Phaser.GameObjects.Image[] = [];
+    const countTexts: Phaser.GameObjects.Text[] = [];
+    const zones: Phaser.GameObjects.Zone[] = [];
+
     for (let i = 0; i < 12; i++) {
       const col = i % cols;
       const row = Math.floor(i / cols);
       const slotX = startX + col * spacingX;
       const slotY = startY + row * spacingY;
 
-      const slotBg = this.scene.add.graphics();
-      slotBg.fillStyle(0x444444, 1);
-      slotBg.fillRect(slotX - 24, slotY - 24, 48, 48);
-      slotBg.lineStyle(2, 0x777777);
-      slotBg.strokeRect(slotX - 24, slotY - 24, 48, 48);
+      allSlotBg.fillStyle(0x444444, 1);
+      allSlotBg.fillRect(slotX - 24, slotY - 24, 48, 48);
+      allSlotBg.lineStyle(2, 0x777777);
+      allSlotBg.strokeRect(slotX - 24, slotY - 24, 48, 48);
 
       const slotFrame = this.scene.add
         .image(slotX, slotY, "ui_v2", "squareButtonWoodWithoutBg")
         .setDisplaySize(50, 50);
+      slotFrames.push(slotFrame);
 
       const icon = this.scene.add
         .image(slotX, slotY, "icon", "potato")
         .setDisplaySize(this.SLOT_ICON_SIZE, this.SLOT_ICON_SIZE)
         .setVisible(false);
       icon.setData("baseScale", icon.scaleX);
+      icons.push(icon);
 
       const countText = this.scene.add
         .text(slotX + 24, slotY + 24, "", {
@@ -186,10 +193,12 @@ export class Inventory {
           strokeThickness: 3,
         })
         .setOrigin(1, 1);
+      countTexts.push(countText);
 
       const slotZone = this.scene.add
         .zone(slotX, slotY, 48, 48)
         .setInteractive({ useHandCursor: true });
+      zones.push(slotZone);
 
       // Тултип + безопасное действие (long-press на тач НЕ продаёт/открывает)
       attachTooltipWithAction(
@@ -235,9 +244,14 @@ export class Inventory {
         });
       });
 
-      this.container.add([slotBg, slotFrame, icon, countText, slotZone]);
       this.slotVisuals.push({ icon, text: countText });
     }
+
+    this.container.add(allSlotBg);
+    this.container.add(slotFrames);
+    this.container.add(icons);
+    this.container.add(countTexts);
+    this.container.add(zones);
 
     this.sellMenuContainer = this.scene.add
       .container(0, 0)

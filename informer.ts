@@ -6,6 +6,7 @@ export class Informer {
   public container!: Phaser.GameObjects.Container;
   private readonly MENU_WIDTH = 420;
   private readonly MENU_HEIGHT = 540;
+  private slotZones: Phaser.GameObjects.Zone[] = [];
 
   constructor(private scene: MainScene) {
     this.createUI();
@@ -115,35 +116,44 @@ export class Informer {
     const startX = -((cols * totalCellSize) / 2) + totalCellSize / 2;
     const startY = -this.MENU_HEIGHT / 2 + 100;
 
+    // Один Graphics для ВСЕХ фонов — вместо 56 отдельных.
+    const allSlotBg = this.scene.add.graphics();
+
+    // Собираем кадры, иконки и зоны в массивы.
+    const slotFrames: Phaser.GameObjects.Image[] = [];
+    const towerIcons: Phaser.GameObjects.Image[] = [];
+    const isTouch = !this.scene.sys.game.device.os.desktop;
+
     let i = 0;
+    let lastLevel = -1;
     for (let lvl = 1; lvl <= 6; lvl++) {
       const maxVariants = lvl === 6 ? 21 : 7;
       for (let v = 1; v <= maxVariants; v++) {
         const col = i % cols;
         const row = Math.floor(i / cols);
-
         const slotX = startX + col * totalCellSize;
         const slotY = startY + row * totalCellSize;
 
-        // 1. Цветная заливка уровня (осталась как была)
-        const slotBg = this.scene.add.graphics();
-        slotBg.fillStyle(this.getFarmColor(lvl), 1);
-        const p = 2;
-        slotBg.fillRect(
-          slotX - cellSize / 2 + p,
-          slotY - cellSize / 2 + p,
-          cellSize - p * 2,
-          cellSize - p * 2,
+        // 1. Фон в ОДИН общий Graphics. Смена цвета только при смене уровня.
+        if (lvl !== lastLevel) {
+          allSlotBg.fillStyle(this.getFarmColor(lvl), 1);
+          lastLevel = lvl;
+        }
+        const pad = 2;
+        allSlotBg.fillRect(
+          slotX - cellSize / 2 + pad,
+          slotY - cellSize / 2 + pad,
+          cellSize - pad * 2,
+          cellSize - pad * 2,
         );
-        this.container.add(slotBg);
 
-        // 2. Рамка из UI-пака поверх заливки
+        // 2. Рамка — пока в массив, добавим позже пачкой
         const slotFrame = this.scene.add
           .image(slotX, slotY, "ui_v2", "squareButtonWoodWithoutBg")
           .setDisplaySize(cellSize, cellSize);
-        this.container.add(slotFrame);
+        slotFrames.push(slotFrame);
 
-        // 3. Иконка башни поверх рамки
+        // 3. Иконка — тоже в массив
         const textureName = `${lvl}_${v}`;
         const towerIcon = this.scene.add.image(
           slotX,
@@ -152,21 +162,22 @@ export class Informer {
           textureName,
         );
         towerIcon.setOrigin(0.5, 0.5);
-
         const maxDim = Math.max(towerIcon.width, towerIcon.height);
         let baseScale = 0.31;
         if (maxDim > 0) {
           baseScale = (cellSize - 12) / maxDim;
           towerIcon.setScale(baseScale);
         }
-        this.container.add(towerIcon);
+        towerIcons.push(towerIcon);
 
-        // 4. Невидимая зона клика
+        // 4. Зона клика
         const zone = this.scene.add
           .zone(slotX, slotY, cellSize, cellSize)
           .setInteractive({ useHandCursor: true });
 
         zone.on("pointerover", () => {
+          slotFrame.setTint(0xdddddd);
+          if (isTouch) return;
           this.scene.tweens.killTweensOf(towerIcon);
           this.scene.tweens.add({
             targets: towerIcon,
@@ -174,10 +185,11 @@ export class Informer {
             duration: 100,
             ease: "Sine.easeOut",
           });
-          slotFrame.setTint(0xdddddd);
         });
 
         zone.on("pointerout", () => {
+          slotFrame.clearTint();
+          if (isTouch) return;
           this.scene.tweens.killTweensOf(towerIcon);
           this.scene.tweens.add({
             targets: towerIcon,
@@ -185,15 +197,14 @@ export class Informer {
             duration: 100,
             ease: "Sine.easeOut",
           });
-          slotFrame.clearTint();
         });
 
         zone.on(
           "pointerdown",
           (
-            p: Phaser.Input.Pointer,
-            x: number,
-            y: number,
+            _p: Phaser.Input.Pointer,
+            _lx: number,
+            _ly: number,
             e: Phaser.Types.Input.EventData,
           ) => {
             e.stopPropagation();
@@ -208,10 +219,14 @@ export class Informer {
           },
         );
 
-        this.container.add(zone);
+        this.slotZones.push(zone);
         i++;
       }
     }
+    this.container.add(allSlotBg);
+    this.container.add(slotFrames);
+    this.container.add(towerIcons);
+    this.container.add(this.slotZones);
   }
 
   private getFarmColor(level: number): number {
@@ -221,10 +236,12 @@ export class Informer {
 
   public show() {
     this.container.setVisible(true);
+    this.slotZones.forEach((z) => z.setInteractive({ useHandCursor: true }));
   }
 
   public hide() {
     this.container.setVisible(false);
+    this.slotZones.forEach((z) => z.disableInteractive());
     if (this.scene.interaction.selectedInformerTower) {
       this.scene.interaction.selectedInformerTower = null;
       this.scene.sideMenuContainer.setVisible(false);

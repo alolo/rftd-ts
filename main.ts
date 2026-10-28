@@ -35,7 +35,8 @@ import { NotificationUI } from "./ui/NotificationUI";
 import { registerSceneEvents } from "./managers/sceneEvents";
 import { createRadialMenu } from "./managers/radialMenuSetup";
 import { initializePlayer } from "./managers/playerInit";
-import { StatusBar } from "@capacitor/status-bar";
+import { SystemBars } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
 
 const originalAddText = Phaser.GameObjects.GameObjectFactory.prototype.text;
 
@@ -384,13 +385,11 @@ export class MainScene extends Phaser.Scene {
 
   create() {
     (window as any).mainScene = this; // чит для консоли на башни
-    StatusBar.hide();
+    this.setupStatusBar();
     registerMobTextures(this);
     this.add.image(0, 0, "map_bg").setOrigin(0, 0);
     this.drawGrid();
 
-    // Маска пути: объединение всех клеток дороги.
-    // Используется для обрезки визуала зон урона (см. EnemyManager.createGroundZone).
     const maskShape = this.make.graphics({ x: 0, y: 0 });
     maskShape.fillStyle(0xffffff, 1);
     for (const cell of BLOCKED_CELLS) {
@@ -401,7 +400,7 @@ export class MainScene extends Phaser.Scene {
         this.CELL_SIZE,
       );
     }
-    this.pathMaskSource = maskShape; // это Graphics, который будет источником для Mask Filter
+    this.pathMaskSource = maskShape;
 
     this.rangeCircle = this.add.graphics().setDepth(4).setVisible(false);
     this.abilityRangeCircle = this.add.graphics().setDepth(4).setVisible(false);
@@ -411,8 +410,6 @@ export class MainScene extends Phaser.Scene {
 
     this.builder = new BuilderManager(this);
     this.enemyManager = new EnemyManager(this);
-
-    // --- СОЗДАНИЕ UI И СИСТЕМ ---
 
     this.waveController = new WaveController(this);
     this.waveController.create();
@@ -469,8 +466,11 @@ export class MainScene extends Phaser.Scene {
     this.radialMenu = createRadialMenu(this);
     registerSceneEvents(this);
     this.hotkeys = new HotkeysManager(this);
+    this.input.setTopOnly(true);
     this.hotkeys.register();
     this.setupPinchZoom();
+    this.setupViewportRecovery();
+    this.setupAndroidBackButton();
   }
 
   public isPath(col: number, row: number): boolean {
@@ -530,13 +530,62 @@ export class MainScene extends Phaser.Scene {
     this.bugReportMenu.setVisible(true);
   }
 
+  private async setupStatusBar() {
+    try {
+      await SystemBars.hide();
+    } catch (e) {
+      console.warn("[SystemBars] hide failed:", e);
+    }
+  }
+
+  private setupViewportRecovery() {
+    const recover = () => {
+      SystemBars.hide().catch(() => {});
+      this.time.delayedCall(80, () => {
+        this.scale.refresh();
+      });
+    };
+
+    window.addEventListener("focus", () => {
+      SystemBars.hide().catch(() => {});
+    });
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", recover);
+    }
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") recover();
+    });
+  }
+
+  private setupAndroidBackButton() {
+    CapacitorApp.addListener("backButton", ({ canGoBack }) => {
+      if (this.inputMenu?.isVisible) return;
+
+      if (this.anyMenuOpen()) {
+        this.openMenu(null);
+        return;
+      }
+
+      if (this.isPaused) {
+        this.openMenu(null);
+        return;
+      }
+
+      this.confirmDialog.show("Выйти из игры?", () => {
+        CapacitorApp.exitApp();
+      });
+    });
+  }
+
   private setupPinchZoom() {
     if (!this.input.pointer2) {
       this.input.addPointer(1);
     }
 
     const cam = this.cameras.main;
-    const MIN_ZOOM = 0.6;
+    const MIN_ZOOM = 1.0;
     const MAX_ZOOM = 2.5;
 
     let isPinching = false;
@@ -582,9 +631,23 @@ export class MainScene extends Phaser.Scene {
         MIN_ZOOM,
         MAX_ZOOM,
       );
-      cam.setZoom(newZoom);
 
-      // Удерживаем точку между пальцами прибитой к миру
+      // Упёрлись в минимум — сбрасываем камеру на изначальную позицию
+      if (newZoom <= 1.001) {
+        cam.setZoom(1);
+        cam.setScroll(0, 0);
+        // Пересчитываем "стартовую точку" для следующего пинча
+        startDistance = currentDistance;
+        startZoom = 1;
+        const midX = (p1.x + p2.x) / 2;
+        const midY = (p1.y + p2.y) / 2;
+        const wp = cam.getWorldPoint(midX, midY);
+        anchorWorldX = wp.x;
+        anchorWorldY = wp.y;
+        return;
+      }
+
+      cam.setZoom(newZoom);
       const midX = (p1.x + p2.x) / 2;
       const midY = (p1.y + p2.y) / 2;
       const worldPoint = cam.getWorldPoint(midX, midY);
@@ -594,7 +657,13 @@ export class MainScene extends Phaser.Scene {
 
     const endPinch = () => {
       const [p1, p2] = getPointers();
-      if (!p1.isDown || !p2.isDown) isPinching = false;
+      if (!p1.isDown || !p2.isDown) {
+        isPinching = false;
+        if (cam.zoom <= 1.001) {
+          cam.setZoom(1);
+          cam.setScroll(0, 0);
+        }
+      }
     };
     this.input.on("pointerup", endPinch);
     this.input.on("pointerupoutside", endPinch);
@@ -615,8 +684,6 @@ export class MainScene extends Phaser.Scene {
 
     this.isPaused = false;
 
-    // На случай рестарта во время паузы — сбрасываем глобальные блокировки,
-    // чтобы новая сессия началась с "живыми" таймерами и анимациями
     this.time.paused = false;
     this.anims.resumeAll();
 
@@ -784,6 +851,15 @@ const config: Phaser.Types.Core.GameConfig = {
     height: 896,
   },
 };
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    SystemBars.hide().catch(() => {});
+  }
+});
+window.addEventListener("focus", () => {
+  SystemBars.hide().catch(() => {});
+});
 
 document.fonts
   .load('16px "GameFont"')

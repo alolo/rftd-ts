@@ -16,6 +16,8 @@ export class SidePanelUI {
   public multiSelectText!: Phaser.GameObjects.Text;
   public abilityIcon!: Phaser.GameObjects.Container;
   public abilityDescText: string = "";
+  private lastRenderedLevel = -1;
+  private lastRenderedVariant = -1;
   public abilityLabelText!: Phaser.GameObjects.Text;
   public targetModeBtnText!: ActionButton;
   public btnRandomMerge!: ActionButton;
@@ -425,7 +427,14 @@ export class SidePanelUI {
 
     if (this.scene.interaction.selectedInformerTower) {
       const { level, variant } = this.scene.interaction.selectedInformerTower;
-      this.renderInformerInfo(level, variant);
+      if (
+        level !== this.lastRenderedLevel ||
+        variant !== this.lastRenderedVariant
+      ) {
+        this.renderInformerInfo(level, variant);
+        this.lastRenderedLevel = level;
+        this.lastRenderedVariant = variant;
+      }
       return;
     }
 
@@ -519,6 +528,8 @@ export class SidePanelUI {
   }
 
   public close() {
+    this.lastRenderedLevel = -1;
+    this.lastRenderedVariant = -1;
     if (this.scene.interaction.selectedInformerTower) {
       this.container.setVisible(false);
       this.scene.interaction.selectedInformerTower = null;

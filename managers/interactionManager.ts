@@ -17,6 +17,10 @@ export class InteractionManager {
   public isWaitingForMergeTarget: boolean = false;
   public wrongMergeAttempts: number = 0;
   public lastClickTime: number = 0;
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private isDragging = false;
+  private readonly DRAG_THRESHOLD = 10;
   public multiSelectedTowers: { col: number; row: number }[] = [];
   public selectedInformerTower: { level: number; variant: number } | null =
     null;
@@ -28,7 +32,57 @@ export class InteractionManager {
     this.scene = scene;
 
     this.scene.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-      this.handleGridClick(pointer.x, pointer.y);
+      this.dragStartX = pointer.x;
+      this.dragStartY = pointer.y;
+      this.isDragging = false;
+
+      // Пинч — обрабатывает setupPinchZoom, не вмешиваемся
+      if (
+        this.scene.input.pointer1.isDown &&
+        this.scene.input.pointer2.isDown
+      ) {
+        return;
+      }
+
+      // Без зума — старое поведение: клик срабатывает сразу
+      if (this.scene.cameras.main.zoom <= 1.001) {
+        this.handleGridClick(pointer.x, pointer.y);
+      }
+    });
+
+    this.scene.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
+      if (!pointer.isDown) return;
+      if (
+        this.scene.input.pointer1.isDown &&
+        this.scene.input.pointer2.isDown
+      ) {
+        return;
+      }
+      // Панорамирование только при зуме
+      if (this.scene.cameras.main.zoom <= 1.001) return;
+
+      const dx = pointer.x - this.dragStartX;
+      const dy = pointer.y - this.dragStartY;
+      if (!this.isDragging && Math.hypot(dx, dy) > this.DRAG_THRESHOLD) {
+        this.isDragging = true;
+      }
+
+      if (this.isDragging) {
+        const cam = this.scene.cameras.main;
+        cam.scrollX -= (pointer.x - pointer.prevPosition.x) / cam.zoom;
+        cam.scrollY -= (pointer.y - pointer.prevPosition.y) / cam.zoom;
+      }
+    });
+
+    this.scene.input.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+      if (this.isDragging) {
+        this.isDragging = false;
+        return;
+      }
+      // Тап при зуме — обрабатываем как клик
+      if (this.scene.cameras.main.zoom > 1.001) {
+        this.handleGridClick(pointer.x, pointer.y);
+      }
     });
 
     this.scene.input.keyboard?.on("keydown-SHIFT", () => {
@@ -82,8 +136,9 @@ export class InteractionManager {
     // Клик в верхнюю полосу со статами
     if (pixelY < 50) return;
 
-    const col = Math.floor(pixelX / this.scene.CELL_SIZE);
-    const row = Math.floor(pixelY / this.scene.CELL_SIZE);
+    const world = this.scene.cameras.main.getWorldPoint(pixelX, pixelY);
+    const col = Math.floor(world.x / this.scene.CELL_SIZE);
+    const row = Math.floor(world.y / this.scene.CELL_SIZE);
 
     if (col < 0 || col >= this.scene.cols || row < 0 || row >= this.scene.rows)
       return;

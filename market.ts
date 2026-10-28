@@ -101,6 +101,11 @@ export class Market {
     const startX = -((cols - 1) * spacingX) / 2;
     const startY = -((rows - 1) * spacingY) / 2.25;
 
+    const allSlotBg = this.scene.add.graphics();
+    const slotFrames: Phaser.GameObjects.Image[] = [];
+    const icons: Phaser.GameObjects.Image[] = [];
+    const zones: Phaser.GameObjects.Zone[] = [];
+
     const itemFrames: (string | null)[] = [
       "attackNormal",
       "attackPiercing",
@@ -126,30 +131,27 @@ export class Market {
       const slotX = startX + col * spacingX;
       const slotY = startY + row * spacingY;
 
-      const slotBg = this.scene.add.graphics();
-      slotBg.fillStyle(0x2a1a0a, 0.7);
-      slotBg.fillRoundedRect(
+      allSlotBg.fillStyle(0x2a1a0a, 0.7);
+      allSlotBg.fillRoundedRect(
         slotX - cellSize / 2,
         slotY - cellSize / 2,
         cellSize,
         cellSize,
         6,
       );
-      slotBg.lineStyle(2, 0x8a5a2a, 0.9);
-      slotBg.strokeRoundedRect(
+      allSlotBg.lineStyle(2, 0x8a5a2a, 0.9);
+      allSlotBg.strokeRoundedRect(
         slotX - cellSize / 2,
         slotY - cellSize / 2,
         cellSize,
         cellSize,
         6,
       );
-      this.container.add(slotBg);
 
-      // Деревянная рамка поверх заливки
       const slotFrame = this.scene.add
         .image(slotX, slotY, "ui_v2", "squareButtonWoodWithoutBg")
         .setDisplaySize(cellSize + 2, cellSize + 2);
-      this.container.add(slotFrame);
+      slotFrames.push(slotFrame);
 
       const frameName = itemFrames[i];
       if (frameName) {
@@ -161,11 +163,23 @@ export class Market {
 
         iconImg.setScale(baseScale);
         iconImg.setData("baseScale", baseScale);
+        icons.push(iconImg);
 
-        this.container.add(iconImg);
-        this.setupMarketItem(i, slotX, slotY, cellSize, iconImg, slotFrame);
+        const zone = this.setupMarketItem(
+          i,
+          slotX,
+          slotY,
+          cellSize,
+          iconImg,
+          slotFrame,
+        );
+        zones.push(zone);
       }
     }
+    this.container.add(allSlotBg);
+    this.container.add(slotFrames);
+    this.container.add(icons);
+    this.container.add(zones);
   }
 
   private setupMarketItem(
@@ -175,7 +189,7 @@ export class Market {
     size: number,
     iconElement: Phaser.GameObjects.Image,
     slotFrame: Phaser.GameObjects.Image,
-  ) {
+  ): Phaser.GameObjects.Zone {
     const zone = this.scene.add
       .zone(x, y, size, size)
       .setInteractive({ useHandCursor: true });
@@ -301,7 +315,7 @@ export class Market {
       });
     });
 
-    this.container.add(zone);
+    return zone;
   }
 
   public show() {
