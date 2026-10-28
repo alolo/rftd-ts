@@ -30,7 +30,7 @@ export class InputMenuUI {
     maxLength: number,
     onConfirm: (text: string) => void,
     allowCancel: boolean,
-    minLength: number = 0,
+    minLength: number = 2,
   ) {
     this.currentInputText = "";
     this.maxInputLength = maxLength;
