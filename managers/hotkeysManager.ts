@@ -20,7 +20,7 @@ export class HotkeysManager {
     const kb = this.scene.input.keyboard;
     if (!kb) return;
 
-    kb.on("keydown-ONE", () => {
+    kb.on("keydown-ONE", (event: KeyboardEvent) => {
       if (!this.scene.canUseHotkeys()) return;
       if (this.scene.inventory && this.scene.inventory.isSellMenuVisible()) {
         this.scene.inventory.handleKeyOne();
@@ -29,7 +29,18 @@ export class HotkeysManager {
       if (!this.scene.radialMenu.isOpen) return;
       const c = this.scene.interaction.activeCellCoords;
       if (!c) return;
+
+      const isShift = event.shiftKey;
+
       if (this.scene.radialMenu.mode === "build") {
+        if (isShift) {
+          this.scene.interaction.activateQuickBuild({
+            kind: "tower",
+            level: 1,
+            cost: this.scene.economy.COST_CHEAP,
+            label: "Башня 1 ур.",
+          });
+        }
         this.scene.builder.buyTower(
           c.col,
           c.row,
@@ -37,11 +48,18 @@ export class HotkeysManager {
           this.scene.economy.COST_CHEAP,
         );
       } else {
+        if (isShift) {
+          this.scene.interaction.activateQuickBuild({
+            kind: "crop",
+            cropType: "potato",
+            label: "Картофель",
+          });
+        }
         this.scene.builder.buyCrop(c.col, c.row, "potato");
       }
     });
 
-    kb.on("keydown-TWO", () => {
+    kb.on("keydown-TWO", (event: KeyboardEvent) => {
       if (!this.scene.canUseHotkeys()) return;
       if (this.scene.inventory && this.scene.inventory.isSellMenuVisible()) {
         this.scene.inventory.handleKeyTwo();
@@ -50,7 +68,18 @@ export class HotkeysManager {
       if (!this.scene.radialMenu.isOpen) return;
       const c = this.scene.interaction.activeCellCoords;
       if (!c) return;
+
+      const isShift = event.shiftKey;
+
       if (this.scene.radialMenu.mode === "build") {
+        if (isShift) {
+          this.scene.interaction.activateQuickBuild({
+            kind: "tower",
+            level: 4,
+            cost: this.scene.economy.COST_EXP,
+            label: "Башня 4 ур.",
+          });
+        }
         this.scene.builder.buyTower(
           c.col,
           c.row,
@@ -58,18 +87,33 @@ export class HotkeysManager {
           this.scene.economy.COST_EXP,
         );
       } else {
+        if (isShift) {
+          this.scene.interaction.activateQuickBuild({
+            kind: "crop",
+            cropType: "onion",
+            label: "Лук",
+          });
+        }
         this.scene.builder.buyCrop(c.col, c.row, "onion");
       }
     });
 
-    kb.on("keydown-THREE", () => {
+    kb.on("keydown-THREE", (event: KeyboardEvent) => {
       if (!this.scene.canUseHotkeys()) return;
       if (!this.scene.radialMenu.isOpen) return;
       const c = this.scene.interaction.activeCellCoords;
       if (!c) return;
+
       if (this.scene.radialMenu.mode === "build") {
         this.scene.radialMenu.switchMode("crop");
       } else {
+        if (event.shiftKey) {
+          this.scene.interaction.activateQuickBuild({
+            kind: "crop",
+            cropType: "pineapple",
+            label: "Ананас",
+          });
+        }
         this.scene.builder.buyCrop(c.col, c.row, "pineapple");
       }
     });
@@ -118,7 +162,7 @@ export class HotkeysManager {
       this.scene.interaction.startTargetedMerge();
     });
 
-        kb.on("keydown-SPACE", () => {
+    kb.on("keydown-SPACE", () => {
       if (!this.scene.canUseHotkeys()) return;
       this.scene.waveController.skipPrepPhase();
     });
@@ -174,13 +218,16 @@ export class HotkeysManager {
       hideTooltip();
       if (this.scene.isTyping) return;
 
-      // 1. Если открыт ConfirmDialog — закрываем его первым.
+      if (this.scene.interaction.quickBuildTarget) {
+        this.scene.interaction.deactivateQuickBuild();
+        return;
+      }
+
       if (this.scene.confirmDialog.isVisible) {
         this.scene.confirmDialog.hide();
         return;
       }
 
-      // 2. Если открыта пауза + поверх неё оверлей — закрываем ТОЛЬКО оверлей.
       if (
         this.scene.isPaused &&
         (this.scene.achievementsMenu.visible ||
@@ -192,10 +239,7 @@ export class HotkeysManager {
         return;
       }
 
-      if (
-        this.scene.waveManager.state === "menu" ||
-        this.scene.isGameOver
-      ) {
+      if (this.scene.waveManager.state === "menu" || this.scene.isGameOver) {
         if (
           this.scene.waveManager.state === "menu" &&
           this.scene.mainMenu &&

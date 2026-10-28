@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import type { MainScene } from "../main";
 import { attachTooltip, hideTooltip } from "../tooltip";
+import type { QuickBuildTarget } from "../managers/interactionManager";
 
 export type RadialMode = "build" | "crop";
 
@@ -12,6 +13,7 @@ interface RadialCallbacks {
   plantOnion: () => void;
   plantPineapple: () => void;
   onClose: () => void;
+  quickBuildActivate: (target: QuickBuildTarget) => void;
 }
 
 interface RadialButton {
@@ -47,15 +49,15 @@ export class RadialMenu {
   private getTooltipsForMode(): string[] {
     if (this.mode === "build") {
       return [
-        "[1] Башня 1 ур 100з.",
-        "[2] Башня 4 ур 800з.",
+        "[1] Башня 1 ур 100з.\n[SHIFT + 1(click)] быстрая постройка",
+        "[2] Башня 4 ур 800з.\n[SHIFT + 2(click)] быстрая постройка",
         "[3] Меню овощей",
       ];
     }
     return [
-      "[1] Посадить картошку 10с",
-      "[2] Посадить лук 10с",
-      "[3] Посадить ананас 10с",
+      "[1] Посадить картошку 10с\n[SHIFT + 1(click)] быстрая постройка",
+      "[2] Посадить лук 10с\n[SHIFT + 2(click)] быстрая постройка",
+      "[3] Посадить ананас 10с\n[SHIFT + 3(click)] быстрая постройка",
     ];
   }
 
@@ -237,17 +239,45 @@ export class RadialMenu {
 
   private refreshMode() {
     if (this.mode === "build") {
-      this.setButton(0, "buildNormal", this.callbacks.build1);
-      this.setButton(1, "buildEpic", this.callbacks.build4);
-      this.setButton(2, "onion", this.callbacks.goCrop);
+      this.setButton(0, "buildNormal", this.callbacks.build1, {
+        kind: "tower",
+        level: 1,
+        cost: this.scene.economy.COST_CHEAP,
+        label: "Башня 1 ур.",
+      });
+      this.setButton(1, "buildEpic", this.callbacks.build4, {
+        kind: "tower",
+        level: 4,
+        cost: this.scene.economy.COST_EXP,
+        label: "Башня 4 ур.",
+      });
+      // Shift+клик по "Овощи" не запускает quick build — просто открывает подменю
+      this.setButton(2, "onion", this.callbacks.goCrop, null);
     } else {
-      this.setButton(0, "potato", this.callbacks.plantPotato);
-      this.setButton(1, "onion", this.callbacks.plantOnion);
-      this.setButton(2, "pineapple", this.callbacks.plantPineapple);
+      this.setButton(0, "potato", this.callbacks.plantPotato, {
+        kind: "crop",
+        cropType: "potato",
+        label: "Картофель",
+      });
+      this.setButton(1, "onion", this.callbacks.plantOnion, {
+        kind: "crop",
+        cropType: "onion",
+        label: "Лук",
+      });
+      this.setButton(2, "pineapple", this.callbacks.plantPineapple, {
+        kind: "crop",
+        cropType: "pineapple",
+        label: "Ананас",
+      });
     }
   }
 
-  private setButton(index: number, iconKey: string, action: () => void) {
+  private setButton(
+    index: number,
+    iconKey: string,
+    action: () => void,
+    quickTarget: QuickBuildTarget | null,
+  ) {
     const btn = this.buttons[index];
     btn.icon.setTexture("icon", iconKey);
 
@@ -255,13 +285,18 @@ export class RadialMenu {
     btn.container.on(
       "pointerdown",
       (
-        _p: Phaser.Input.Pointer,
+        p: Phaser.Input.Pointer,
         _lx: number,
         _ly: number,
         e: Phaser.Types.Input.EventData,
       ) => {
         e.stopPropagation();
-        action();
+        const shift = !!(p.event as MouseEvent | undefined)?.shiftKey;
+        if (shift && quickTarget) {
+          this.callbacks.quickBuildActivate(quickTarget);
+        } else {
+          action();
+        }
       },
     );
   }

@@ -102,7 +102,9 @@ export class BuilderManager {
       onion: "Лук",
       pineapple: "Ананас",
     };
-    this.scene.showNotification(`${cropNames[type]} успешно посажен!`);
+    if (!this.scene.interaction.quickBuildTarget) {
+      this.scene.showNotification(`${cropNames[type]} успешно посажен!`);
+    }
 
     this.scene.radialMenu.close();
     this.scene.interaction.activeCellCoords = null;

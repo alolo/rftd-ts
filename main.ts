@@ -89,9 +89,10 @@ export class MainScene extends Phaser.Scene {
 
   public mapBuildings!: MapBuildingsUI;
   public notificationUI!: NotificationUI;
+  private quickBuildIndicator!: Phaser.GameObjects.Text;
   public radialMenu!: RadialMenu;
 
-    // --- НОВЫЕ UI-МЕНЕДЖЕРЫ ---
+  // --- НОВЫЕ UI-МЕНЕДЖЕРЫ ---
   public topBar!: TopBarUI;
   public sidePanel!: SidePanelUI;
 
@@ -100,26 +101,66 @@ export class MainScene extends Phaser.Scene {
   public abilityRangeCircle!: Phaser.GameObjects.Graphics;
 
   // --- ГЕТТЕРЫ для обратной совместимости с внешними классами ---
-  public get goldText() { return this.topBar.goldText; }
-  public get woodText() { return this.topBar.woodText; }
-  public get medalsText() { return this.topBar.medalsText; }
-  public get playerLivesText() { return this.topBar.playerLivesText; }
-  public get burgerBtn() { return this.topBar.burgerBtn; }
-  public get marketPopupContainer() { return this.topBar.marketPopupContainer; }
-  public get achievementsDot() { return this.topBar.achievementsDot; }
-  public get sideMenuContainer() { return this.sidePanel.container; }
-  public get towerIconGroup() { return this.sidePanel.towerIconGroup; }
-  public get towerIconImage() { return this.sidePanel.towerIconImage; }
-  public get towerTitleText() { return this.sidePanel.towerTitleText; }
-  public get towerInfoText() { return this.sidePanel.towerInfoText; }
-  public get multiSelectText() { return this.sidePanel.multiSelectText; }
-  public get targetModeBtnText() { return this.sidePanel.targetModeBtnText; }
-  public get btnSell() { return this.sidePanel.btnSell; }
-  public get btnRandomMerge() { return this.sidePanel.btnRandomMerge; }
-  public get btnTargetMerge() { return this.sidePanel.btnTargetMerge; }
-  public get btnReroll() { return this.sidePanel.btnReroll; }
-  public get abilityIcon() { return this.sidePanel.abilityIcon; }
-  public get abilityTooltip() { return this.sidePanel.abilityTooltip; }
+  public get goldText() {
+    return this.topBar.goldText;
+  }
+  public get woodText() {
+    return this.topBar.woodText;
+  }
+  public get medalsText() {
+    return this.topBar.medalsText;
+  }
+  public get playerLivesText() {
+    return this.topBar.playerLivesText;
+  }
+  public get burgerBtn() {
+    return this.topBar.burgerBtn;
+  }
+  public get marketPopupContainer() {
+    return this.topBar.marketPopupContainer;
+  }
+  public get achievementsDot() {
+    return this.topBar.achievementsDot;
+  }
+  public get sideMenuContainer() {
+    return this.sidePanel.container;
+  }
+  public get towerIconGroup() {
+    return this.sidePanel.towerIconGroup;
+  }
+  public get towerIconImage() {
+    return this.sidePanel.towerIconImage;
+  }
+  public get towerTitleText() {
+    return this.sidePanel.towerTitleText;
+  }
+  public get towerInfoText() {
+    return this.sidePanel.towerInfoText;
+  }
+  public get multiSelectText() {
+    return this.sidePanel.multiSelectText;
+  }
+  public get targetModeBtnText() {
+    return this.sidePanel.targetModeBtnText;
+  }
+  public get btnSell() {
+    return this.sidePanel.btnSell;
+  }
+  public get btnRandomMerge() {
+    return this.sidePanel.btnRandomMerge;
+  }
+  public get btnTargetMerge() {
+    return this.sidePanel.btnTargetMerge;
+  }
+  public get btnReroll() {
+    return this.sidePanel.btnReroll;
+  }
+  public get abilityIcon() {
+    return this.sidePanel.abilityIcon;
+  }
+  public get abilityTooltip() {
+    return this.sidePanel.abilityTooltip;
+  }
 
   public gameSpeed: number = 1;
   private gameTime: number = 0;
@@ -200,8 +241,7 @@ export class MainScene extends Phaser.Scene {
     if (name !== "bugReport") this.bugReportMenu.setVisible(false);
     if (name !== "profile") this.profileMenu.hide();
     if (name !== "achievements") this.achievementsMenu.hide();
-    if (name !== "pause" && !isPausePreserved)
-      this.pauseMenu.setVisible(false);
+    if (name !== "pause" && !isPausePreserved) this.pauseMenu.setVisible(false);
     if (name !== "side") {
       this.sideMenuContainer.setVisible(false);
       this.interaction.deselectTower();
@@ -390,6 +430,20 @@ export class MainScene extends Phaser.Scene {
     this.cols = Math.floor(this.scale.width / this.CELL_SIZE);
     this.rows = Math.floor(this.scale.height / this.CELL_SIZE);
     this.interaction = new InteractionManager(this);
+
+    this.quickBuildIndicator = this.add
+      .text(this.scale.width / 2, this.scale.height - 20, "", {
+        fontSize: "18px",
+        color: "#ffffff",
+        fontStyle: "bold",
+        backgroundColor: "#000000cc",
+        padding: { x: 14, y: 8 },
+        align: "center",
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(1001)
+      .setVisible(false);
+
     this.mapBuildings = new MapBuildingsUI(this);
     this.mapBuildings.create();
     this.notificationUI = new NotificationUI(this);
@@ -528,6 +582,7 @@ export class MainScene extends Phaser.Scene {
     if (this.isGameOver) return;
     this.isGameOver = true;
     this.waveManager.state = "menu";
+    this.interaction?.deactivateQuickBuild();
     this.gameOverMenu.show(isVictory);
   }
 
@@ -624,6 +679,17 @@ export class MainScene extends Phaser.Scene {
       graphics.lineTo(this.scale.width, y);
     }
     graphics.strokePath();
+  }
+
+  public showQuickBuildIndicator(label: string) {
+    this.quickBuildIndicator?.setText(
+      `Быстрое строительство: ${label} | Отпустите Shift или нажмите ESC`,
+    );
+    this.quickBuildIndicator?.setVisible(true);
+  }
+
+  public hideQuickBuildIndicator() {
+    this.quickBuildIndicator?.setVisible(false);
   }
 }
 

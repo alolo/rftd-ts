@@ -35,5 +35,16 @@ export function createRadialMenu(scene: MainScene): RadialMenu {
       scene.radialMenu.close();
       scene.interaction.activeCellCoords = null;
     },
+    quickBuildActivate: (target) => {
+      const c = scene.interaction.activeCellCoords;
+      if (!c) return;
+      scene.interaction.activateQuickBuild(target);
+      // Строим первый экземпляр на текущей клетке
+      if (target.kind === "tower") {
+        scene.builder.buyTower(c.col, c.row, target.level, target.cost);
+      } else {
+        scene.builder.buyCrop(c.col, c.row, target.cropType);
+      }
+    },
   });
 }

@@ -2,7 +2,12 @@ import * as Phaser from "phaser";
 import type { MainScene } from "../main";
 import { Tower } from "../tower";
 import { Crop } from "../Crop";
+import type { CropType } from "../economy";
 import { hideTooltip } from "../tooltip";
+
+export type QuickBuildTarget =
+  | { kind: "tower"; level: number; cost: number; label: string }
+  | { kind: "crop"; cropType: CropType; label: string };
 
 export class InteractionManager {
   public scene: MainScene;
@@ -16,11 +21,22 @@ export class InteractionManager {
   public selectedInformerTower: { level: number; variant: number } | null =
     null;
 
+  public shiftHeld: boolean = false;
+  public quickBuildTarget: QuickBuildTarget | null = null;
+
   constructor(scene: MainScene) {
     this.scene = scene;
 
     this.scene.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       this.handleGridClick(pointer.x, pointer.y);
+    });
+
+    this.scene.input.keyboard?.on("keydown-SHIFT", () => {
+      this.shiftHeld = true;
+    });
+    this.scene.input.keyboard?.on("keyup-SHIFT", () => {
+      this.shiftHeld = false;
+      this.deactivateQuickBuild();
     });
   }
 
@@ -66,6 +82,11 @@ export class InteractionManager {
 
     if (col < 0 || col >= this.scene.cols || row < 0 || row >= this.scene.rows)
       return;
+
+    if (this.quickBuildTarget) {
+      this.handleQuickBuildClick(col, row);
+      return;
+    }
 
     if (this.scene.isPath(col, row)) {
       this.closeAllInGameMenus();
@@ -196,6 +217,38 @@ export class InteractionManager {
       const pixelX = col * this.scene.CELL_SIZE + this.scene.CELL_SIZE / 2;
       const pixelY = row * this.scene.CELL_SIZE + this.scene.CELL_SIZE / 2;
       this.scene.radialMenu.open(pixelX, pixelY, "build");
+    }
+  }
+
+  public activateQuickBuild(target: QuickBuildTarget) {
+    this.quickBuildTarget = target;
+    this.scene.showQuickBuildIndicator(target.label);
+  }
+
+  public deactivateQuickBuild() {
+    if (!this.quickBuildTarget) return;
+    this.quickBuildTarget = null;
+    this.scene.hideQuickBuildIndicator();
+  }
+
+  private handleQuickBuildClick(col: number, row: number) {
+    if (!this.quickBuildTarget) return;
+
+    if (this.scene.isPath(col, row)) {
+      this.scene.showNotification("Здесь нельзя строить");
+      return;
+    }
+
+    if (this.scene.builder.grid[row][col] !== null) {
+      this.scene.showNotification("Клетка занята");
+      return;
+    }
+
+    const target = this.quickBuildTarget;
+    if (target.kind === "tower") {
+      this.scene.builder.buyTower(col, row, target.level, target.cost);
+    } else {
+      this.scene.builder.buyCrop(col, row, target.cropType);
     }
   }
 
