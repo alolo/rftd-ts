@@ -42,6 +42,11 @@ export class InteractionManager {
 
   public handleGridClick(pixelX: number, pixelY: number) {
     hideTooltip();
+
+    // Если оба пальца нажаты — это пинч, а не клик по сетке.
+    if (this.scene.input.pointer1.isDown && this.scene.input.pointer2.isDown) {
+      return;
+    }
     if (
       this.scene.isGameOver ||
       this.scene.waveManager.state === "menu" ||

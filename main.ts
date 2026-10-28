@@ -35,6 +35,7 @@ import { NotificationUI } from "./ui/NotificationUI";
 import { registerSceneEvents } from "./managers/sceneEvents";
 import { createRadialMenu } from "./managers/radialMenuSetup";
 import { initializePlayer } from "./managers/playerInit";
+import { StatusBar } from "@capacitor/status-bar";
 
 const originalAddText = Phaser.GameObjects.GameObjectFactory.prototype.text;
 
@@ -383,6 +384,7 @@ export class MainScene extends Phaser.Scene {
 
   create() {
     (window as any).mainScene = this; // чит для консоли на башни
+    StatusBar.hide();
     registerMobTextures(this);
     this.add.image(0, 0, "map_bg").setOrigin(0, 0);
     this.drawGrid();
@@ -468,6 +470,7 @@ export class MainScene extends Phaser.Scene {
     registerSceneEvents(this);
     this.hotkeys = new HotkeysManager(this);
     this.hotkeys.register();
+    this.setupPinchZoom();
   }
 
   public isPath(col: number, row: number): boolean {
@@ -524,6 +527,76 @@ export class MainScene extends Phaser.Scene {
 
   public showBugReport() {
     this.bugReportMenu.setVisible(true);
+  }
+
+  private setupPinchZoom() {
+    if (!this.input.pointer2) {
+      this.input.addPointer(1);
+    }
+
+    const cam = this.cameras.main;
+    const MIN_ZOOM = 0.6;
+    const MAX_ZOOM = 2.5;
+
+    let isPinching = false;
+    let startDistance = 0;
+    let startZoom = 1;
+    let anchorWorldX = 0;
+    let anchorWorldY = 0;
+
+    const getPointers = () => [this.input.pointer1, this.input.pointer2];
+
+    this.input.on("pointerdown", () => {
+      const [p1, p2] = getPointers();
+      if (!p1.isDown || !p2.isDown) return;
+
+      isPinching = true;
+      startDistance = Phaser.Math.Distance.Between(p1.x, p1.y, p2.x, p2.y);
+      startZoom = cam.zoom;
+
+      const midX = (p1.x + p2.x) / 2;
+      const midY = (p1.y + p2.y) / 2;
+      const worldPoint = cam.getWorldPoint(midX, midY);
+      anchorWorldX = worldPoint.x;
+      anchorWorldY = worldPoint.y;
+    });
+
+    this.input.on("pointermove", () => {
+      if (!isPinching) return;
+      const [p1, p2] = getPointers();
+      if (!p1.isDown || !p2.isDown) {
+        isPinching = false;
+        return;
+      }
+      const currentDistance = Phaser.Math.Distance.Between(
+        p1.x,
+        p1.y,
+        p2.x,
+        p2.y,
+      );
+      if (startDistance < 1) return;
+
+      const newZoom = Phaser.Math.Clamp(
+        startZoom * (currentDistance / startDistance),
+        MIN_ZOOM,
+        MAX_ZOOM,
+      );
+      cam.setZoom(newZoom);
+
+      // Удерживаем точку между пальцами прибитой к миру
+      const midX = (p1.x + p2.x) / 2;
+      const midY = (p1.y + p2.y) / 2;
+      const worldPoint = cam.getWorldPoint(midX, midY);
+      cam.scrollX += anchorWorldX - worldPoint.x;
+      cam.scrollY += anchorWorldY - worldPoint.y;
+    });
+
+    const endPinch = () => {
+      const [p1, p2] = getPointers();
+      if (!p1.isDown || !p2.isDown) isPinching = false;
+    };
+    this.input.on("pointerup", endPinch);
+    this.input.on("pointerupoutside", endPinch);
   }
 
   public togglePause() {

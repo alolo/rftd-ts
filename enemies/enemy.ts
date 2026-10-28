@@ -210,6 +210,9 @@ export class Enemy {
         event: Phaser.Types.Input.EventData,
       ) => {
         event.stopPropagation();
+        const inp = (this.scene as any).input;
+        if (inp?.pointer1?.isDown && inp?.pointer2?.isDown) return;
+        (this.scene as any).showEnemyInfo(this);
         (this.scene as any).showEnemyInfo(this);
       },
     );

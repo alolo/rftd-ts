@@ -13,6 +13,7 @@ export class InputMenuUI {
   private maxInputLength: number = 16;
   private isSelectedAll: boolean = false;
   private onInputConfirm: ((text: string) => void) | null = null;
+  private hiddenInput!: HTMLInputElement;
 
   constructor(scene: MainScene) {
     this.scene = scene;
@@ -34,6 +35,11 @@ export class InputMenuUI {
     this.onInputConfirm = onConfirm;
     this.isSelectedAll = false;
 
+    if (this.hiddenInput) {
+      this.hiddenInput.value = "";
+      this.hiddenInput.maxLength = maxLength;
+    }
+
     this.inputTextDisplay.setBackgroundColor("transparent");
     this.titleText.setText(title);
     this.inputTextDisplay.setText("_");
@@ -46,12 +52,14 @@ export class InputMenuUI {
     }
 
     this.container.setVisible(true);
+    this.focusHiddenInput();
   }
 
   private confirm() {
     if (!this.container.visible) return;
     const text = this.currentInputText;
     const cb = this.onInputConfirm;
+    this.blurHiddenInput();
     this.container.setVisible(false);
     this.onInputConfirm = null;
     if (cb) cb(text);
@@ -59,12 +67,14 @@ export class InputMenuUI {
 
   private cancel() {
     if (!this.container.visible) return;
+    this.blurHiddenInput();
     this.container.setVisible(false);
     this.onInputConfirm = null;
   }
 
   private handlePaste = (event: ClipboardEvent) => {
     if (!this.isVisible) return;
+    if (document.activeElement === this.hiddenInput) return;
     if (this.isSelectedAll) {
       this.currentInputText = "";
       this.isSelectedAll = false;
@@ -132,6 +142,92 @@ export class InputMenuUI {
 
     this.inputTextDisplay.setText(this.currentInputText + "_");
   };
+
+  private handleHtmlInput = () => {
+    if (!this.isVisible || !this.hiddenInput) return;
+    let val = this.hiddenInput.value;
+    val = val.replace(/[^a-zA-Zа-яА-ЯёЁ0-9_.\-!@#$%^&*()[\]? ]/g, "");
+    if (val.length > this.maxInputLength) {
+      val = val.substring(0, this.maxInputLength);
+    }
+    if (val !== this.hiddenInput.value) this.hiddenInput.value = val;
+    this.currentInputText = val;
+    this.inputTextDisplay.setText(val + "_");
+  };
+
+  private handleHtmlKeyDown = (e: KeyboardEvent) => {
+    if (!this.isVisible) return;
+    if (e.key === "Enter" || e.keyCode === 13) {
+      e.preventDefault();
+      this.confirm();
+      return;
+    }
+    if (e.key === "Escape" && this.btnCancelInput.visible) {
+      e.preventDefault();
+      this.cancel();
+      return;
+    }
+    // Не даём Phaser'у дублировать ввод (он слушает window, а мы — input)
+    e.stopPropagation();
+  };
+
+  private createHiddenInput() {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.autocapitalize = "off";
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    input.setAttribute("inputmode", "text");
+    input.setAttribute("enterkeyhint", "done");
+    input.maxLength = this.maxInputLength;
+
+    Object.assign(input.style, {
+      position: "fixed",
+      left: "50%",
+      top: "50%",
+      width: "1px",
+      height: "1px",
+      opacity: "0",
+      padding: "0",
+      margin: "0",
+      border: "0",
+      outline: "none",
+      background: "transparent",
+      caretColor: "transparent",
+      zIndex: "9999",
+      fontSize: "16px", // <16px на iOS вызывает авто-зум страницы
+      pointerEvents: "none", // фокус даём программно
+    });
+
+    input.addEventListener("input", this.handleHtmlInput);
+    input.addEventListener("keydown", this.handleHtmlKeyDown);
+
+    document.body.appendChild(input);
+    this.hiddenInput = input;
+
+    this.scene.events.once("shutdown", () => {
+      input.removeEventListener("input", this.handleHtmlInput);
+      input.removeEventListener("keydown", this.handleHtmlKeyDown);
+      input.remove();
+    });
+  }
+
+  private focusHiddenInput() {
+    if (!this.hiddenInput) return;
+    this.hiddenInput.maxLength = this.maxInputLength;
+    this.hiddenInput.value = this.currentInputText;
+    this.hiddenInput.focus();
+    const len = this.currentInputText.length;
+    try {
+      this.hiddenInput.setSelectionRange(len, len);
+    } catch (_) {}
+  }
+
+  private blurHiddenInput() {
+    if (this.hiddenInput && document.activeElement === this.hiddenInput) {
+      this.hiddenInput.blur();
+    }
+  }
 
   private create() {
     this.container = this.scene.add
@@ -203,6 +299,23 @@ export class InputMenuUI {
         strokeThickness: 3,
       })
       .setOrigin(0.5);
+
+    // Кликабельная зона над полем ввода — тап открывает клавиатуру на мобилке.
+    const inputTapZone = this.scene.add
+      .zone(centerX, centerY - 10, 460, 48)
+      .setInteractive({ useHandCursor: true })
+      .on(
+        "pointerdown",
+        (
+          _p: Phaser.Input.Pointer,
+          _lx: number,
+          _ly: number,
+          e: Phaser.Types.Input.EventData,
+        ) => {
+          e.stopPropagation();
+          this.focusHiddenInput();
+        },
+      );
 
     const makeBtn = (
       x: number,
@@ -291,6 +404,8 @@ export class InputMenuUI {
       this.btnCancelInput,
     ]);
 
+    this.container.add(inputTapZone);
+    this.createHiddenInput();
     this.scene.input.keyboard?.on("keydown", this.handleKeyDown);
     window.addEventListener("paste", this.handlePaste);
     this.scene.events.once("shutdown", () => {
