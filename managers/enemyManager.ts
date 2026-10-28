@@ -1257,15 +1257,14 @@ export class EnemyManager {
     const S = 1;
 
     // Пропорции
-    const bladeW = 14 * S; // ширина клинка (было 6!)
-    const bladeH = 100 * S; // длина клинка (без острия)
-    const tipH = 26 * S; // длина острия
-    const guardW = 44 * S; // ширина гарды
+    const bladeW = 14 * S;
+    const bladeH = 100 * S;
+    const tipH = 26 * S;
+    const guardW = 44 * S;
     const guardH = 7 * S;
     const gripW = 8 * S;
     const gripH = 24 * S;
 
-    // Раскладка по Y (0,0 = остриё)
     const bladeBodyTop = -(bladeH + tipH);
     const guardTop = bladeBodyTop - guardH;
     const gripTop = guardTop - gripH;
@@ -1274,18 +1273,16 @@ export class EnemyManager {
     // ═══ МЕЧ ═══
     const blade = this.scene.add.graphics();
 
-    // Клинок (сужается к острию — это ключ, почему не «пуля»)
     blade.fillStyle(0xdddddd, 1);
     blade.beginPath();
     blade.moveTo(-bladeW / 2, bladeBodyTop);
     blade.lineTo(bladeW / 2, bladeBodyTop);
     blade.lineTo(bladeW * 0.35, bladeBodyTop + bladeH);
-    blade.lineTo(0, 0); // остриё
+    blade.lineTo(0, 0);
     blade.lineTo(-bladeW * 0.35, bladeBodyTop + bladeH);
     blade.closePath();
     blade.fillPath();
 
-    // Правая грань (тёмная — объём)
     blade.fillStyle(0x999999, 1);
     blade.beginPath();
     blade.moveTo(bladeW / 2, bladeBodyTop);
@@ -1295,7 +1292,6 @@ export class EnemyManager {
     blade.closePath();
     blade.fillPath();
 
-    // Левая грань (светлая — блик)
     blade.fillStyle(0xf5f5f5, 0.9);
     blade.beginPath();
     blade.moveTo(-bladeW / 2, bladeBodyTop);
@@ -1305,35 +1301,29 @@ export class EnemyManager {
     blade.closePath();
     blade.fillPath();
 
-    // Дол (центральная канавка)
     blade.fillStyle(0x888888, 1);
     blade.fillRect(-1.5 * S, bladeBodyTop + 4 * S, 3 * S, bladeH - 8 * S);
 
-    // Гарда
     blade.fillStyle(0xffcc44, 1);
     blade.fillRect(-guardW / 2, guardTop, guardW, guardH);
-    // Левый кончик гарды
     blade.beginPath();
     blade.moveTo(-guardW / 2, guardTop);
     blade.lineTo(-guardW / 2 - 4 * S, guardTop + guardH / 2);
     blade.lineTo(-guardW / 2, guardTop + guardH);
     blade.closePath();
     blade.fillPath();
-    // Правый кончик
     blade.beginPath();
     blade.moveTo(guardW / 2, guardTop);
     blade.lineTo(guardW / 2 + 4 * S, guardTop + guardH / 2);
     blade.lineTo(guardW / 2, guardTop + guardH);
     blade.closePath();
     blade.fillPath();
-    // Тень гарды
+
     blade.fillStyle(0xaa8800, 1);
     blade.fillRect(-guardW / 2, guardTop + guardH - 2 * S, guardW, 2 * S);
 
-    // Рукоять
     blade.fillStyle(0x5a2a0a, 1);
     blade.fillRect(-gripW / 2, gripTop, gripW, gripH);
-    // Обмотка
     blade.fillStyle(0x884422, 1);
     for (let i = 0; i < 5; i++) {
       blade.fillRect(
@@ -1344,13 +1334,12 @@ export class EnemyManager {
       );
     }
 
-    // Навершие
     blade.fillStyle(0xffcc44, 1);
     blade.fillCircle(0, pommelY, 5.5 * S);
     blade.fillStyle(0xffee88, 1);
     blade.fillCircle(-1.5 * S, pommelY - 1.5 * S, 2 * S);
 
-    // ═══ СЛЕД (motion trail) ═══
+    // ═══ СЛЕД ═══
     const trail = this.scene.add.graphics();
     trail.fillStyle(0xffcc44, 0.3);
     trail.fillRect(
@@ -1367,19 +1356,23 @@ export class EnemyManager {
       60 * S,
     );
 
-    // ═══ ПОЗИЦИЯ + НАКЛОН ═══
+    // ═══ КОНТЕЙНЕР: меч и след уничтожатся вместе ═══
     const startY = y - 260 * S;
-    blade.setPosition(x, startY).setDepth(19).setRotation(-0.12);
-    trail.setPosition(x, startY).setDepth(18).setRotation(-0.12);
+    const bladeContainer = this.scene.add
+      .container(x, startY, [trail, blade])
+      .setDepth(19)
+      .setRotation(-0.12);
 
-    // ═══ ПАДЕНИЕ ═══
     this.scene.tweens.add({
-      targets: blade,
+      targets: bladeContainer,
       y: y + 20,
       rotation: 0,
       duration: 280,
       ease: "Quad.easeIn",
       onComplete: () => {
+        // Уничтожаем и меч, и след одним вызовом — гарантированно
+        bladeContainer.destroy();
+
         // Вспышка
         const flash = this.scene.add.graphics().setPosition(x, y).setDepth(19);
         flash.fillStyle(0xffffff, 1);
@@ -1446,18 +1439,6 @@ export class EnemyManager {
         });
 
         this.scene.cameras.main.shake(90, 0.003);
-
-        // ═══ МЕЧ ТОРЧИТ 500мс, ПОТОМ РАСТВОРЯЕТСЯ ═══
-        this.scene.time.delayedCall(500, () => {
-          this.scene.tweens.add({
-            targets: blade,
-            alpha: 0,
-            y: y + 30,
-            duration: 300,
-            ease: "Quad.easeIn",
-            onComplete: () => blade.destroy(),
-          });
-        });
       },
     });
   }

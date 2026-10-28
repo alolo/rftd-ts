@@ -1336,25 +1336,29 @@ export class Tower {
       this.isSelfBuffed = true;
 
       if (!this.selfBuffVisual) {
-        this.selfBuffVisual = this.scene.add.graphics();
-        this.selfBuffVisual.lineStyle(4, 0xff0000, 0.8);
-        this.selfBuffVisual.strokeRoundedRect(
-          this.col * this.cellSize + 4,
-          this.row * this.cellSize + 4,
-          this.cellSize - 8,
-          this.cellSize - 8,
-          4,
-        );
-        this.selfBuffVisual.setDepth(6);
+        this.createSelfBuffVisual();
       } else {
         this.selfBuffVisual.setVisible(true);
+        if (!this.scene.tweens.isTweening(this.selfBuffVisual)) {
+          this.scene.tweens.add({
+            targets: this.selfBuffVisual,
+            scale: { from: 0.9, to: 1.12 },
+            alpha: { from: 0.65, to: 1.0 },
+            duration: 500,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut",
+          });
+        }
       }
 
       this.selfBuffTimer = this.scene.time.addEvent({
         delay: this.selfBuffDuration,
         callback: () => {
           this.isSelfBuffed = false;
-          if (this.selfBuffVisual) this.selfBuffVisual.setVisible(false);
+          if (this.selfBuffVisual) {
+            this.selfBuffVisual.setVisible(false);
+          }
         },
       });
     }
@@ -1657,7 +1661,10 @@ export class Tower {
     if (this.owlBuffTimer) this.owlBuffTimer.destroy();
     if (this.buffVisual) this.buffVisual.destroy();
     if (this.selfBuffTimer) this.selfBuffTimer.destroy();
-    if (this.selfBuffVisual) this.selfBuffVisual.destroy();
+    if (this.selfBuffVisual) {
+      this.scene.tweens.killTweensOf(this.selfBuffVisual);
+      this.selfBuffVisual.destroy();
+    }
   }
 
   private getFarmColor(level: number): number {
@@ -1716,6 +1723,48 @@ export class Tower {
         this.cellSize * 0.3,
       );
     }
+  }
+
+  private createSelfBuffVisual() {
+    const cx = this.centerX;
+    const cy = this.centerY;
+    const auraY = cy - 5;
+    const rx = this.cellSize * 0.75;
+    const ry = this.cellSize * 0.9;
+
+    this.selfBuffVisual = this.scene.add.graphics({ x: cx, y: auraY });
+    this.selfBuffVisual.setDepth(6 + this.row);
+
+    this.selfBuffVisual.fillStyle(0xcc88ff, 0.12);
+    this.selfBuffVisual.fillEllipse(0, 0, rx * 2, ry * 2);
+
+    this.selfBuffVisual.fillStyle(0xaa66ff, 0.22);
+    this.selfBuffVisual.fillEllipse(0, 0, rx * 1.4, ry * 1.4);
+
+    this.selfBuffVisual.fillStyle(0xddbbff, 0.28);
+    this.selfBuffVisual.fillEllipse(0, 0, rx * 0.9, ry * 0.9);
+
+    this.selfBuffVisual.lineStyle(2, 0xeeddff, 0.7);
+    this.selfBuffVisual.strokeEllipse(0, 0, rx * 1.7, ry * 1.7);
+
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const px = Math.cos(angle) * rx * 0.75;
+      const py = Math.sin(angle) * ry * 0.75;
+      this.selfBuffVisual.fillStyle(0xffffff, 0.7);
+      this.selfBuffVisual.fillCircle(px, py, 1.5);
+    }
+
+    this.scene.tweens.add({
+      targets: this.selfBuffVisual,
+      scaleX: { from: 0.92, to: 1.1 },
+      scaleY: { from: 0.92, to: 1.1 },
+      alpha: { from: 0.65, to: 1.0 },
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
   }
 
   public setSelected(isSelected: boolean) {

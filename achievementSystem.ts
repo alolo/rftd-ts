@@ -332,7 +332,7 @@ export class AchievementSystem {
     if (ach.rewardWood) this.scene.economy.addWood(ach.rewardWood);
     if (ach.rewardGold) this.scene.economy.addGold(ach.rewardGold);
 
-    this.scene.showNotification(`🏆 Выполнено: ${ach.name}!`);
+    this.scene.showAchievementNotification(ach.name);
 
     this.scene.woodText.setText(`: ${this.scene.economy.wood}`);
     this.scene.goldText.setText(`: ${this.scene.economy.gold}`);

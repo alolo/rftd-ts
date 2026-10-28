@@ -22,7 +22,7 @@ export class TopBarUI {
   private burgerIsOpen = false;
   private burgerHoverScale = 1;
   private burgerPopupTimer: Phaser.Time.TimerEvent | null = null;
-  private achievementsBtnObj!: Phaser.GameObjects.Text;
+  private achievementsBtnObj!: Phaser.GameObjects.Container;
   private achievementsDotCircle!: Phaser.GameObjects.Arc;
 
   constructor(scene: MainScene) {
@@ -134,69 +134,145 @@ export class TopBarUI {
       `: ${this.scene.economy.medals}`,
     );
 
-    // --- ЦЕНТРАЛЬНЫЕ КНОПКИ ---
-    const btnStyle = {
-      fontSize: "16px",
-      color: "#000000ff",
-      fontStyle: "bold",
-      stroke: "#ffe9c8ff",
-      strokeThickness: 1,
-    } as const;
+    // --- ЦЕНТРАЛЬНЫЕ КНОПКИ: nineslice одинакового размера ---
+    interface IconBtnDef {
+      icon: string;
+      label: string;
+      tooltip: string;
+      onClick: () => void;
+    }
 
-    const btnDefs: [string, () => void][] = [
-      [
-        "[I] Профиль",
-        () =>
+    const menuBtnDefs: IconBtnDef[] = [
+      {
+        icon: "profile",
+        label: "Профиль",
+        tooltip: "[I] Профиль",
+        onClick: () =>
           this.scene.openMenu(this.scene.profileMenuVisible ? null : "profile"),
-      ],
-      ["[ESC] Меню", () => this.scene.togglePause()],
-      [
-        "[B] Инвентарь",
-        () =>
+      },
+      {
+        icon: "pause",
+        label: "Меню",
+        tooltip: "[ESC] Меню",
+        onClick: () => this.scene.togglePause(),
+      },
+      {
+        icon: "bag",
+        label: "Инвентарь",
+        tooltip: "[B] Инвентарь",
+        onClick: () =>
           this.scene.openMenu(
             this.scene.inventory.isVisible ? null : "inventory",
           ),
-      ],
-      [
-        "[J] Достижения",
-        () =>
+      },
+      {
+        icon: "achievements",
+        label: "Достижения",
+        tooltip: "[J] Достижения",
+        onClick: () =>
           this.scene.openMenu(
             this.scene.achievementsMenuVisible ? null : "achievements",
           ),
-      ],
+      },
     ];
 
-    const btnGap = 40;
-    const btnObjs = btnDefs.map(([label, onClick]) => {
-      return this.scene.add
-        .text(0, CENTER_Y, label, btnStyle)
-        .setOrigin(0.5, 0.5)
-        .setInteractive({ useHandCursor: true })
+    const MBTN_W = 175;
+    const MBTN_H = 48;
+    const MBTN_CORNER = 26;
+    const MBTN_ICON = 24;
+    const MBTN_PAD_L = 15;
+    const MBTN_ICON_GAP = 12;
+    const MBTN_GAP = 20;
+
+    const menuLabelStyle = {
+      fontSize: "14px",
+      color: "#3d2817",
+      fontStyle: "bold",
+      stroke: "#fff5e0",
+      strokeThickness: 2,
+    } as const;
+
+    const totalMenuW =
+      MBTN_W * menuBtnDefs.length + MBTN_GAP * (menuBtnDefs.length - 1);
+    let menuCursor = this.scene.scale.width / 2 - totalMenuW / 2;
+
+    const menuBtns: Phaser.GameObjects.Container[] = [];
+
+    for (const def of menuBtnDefs) {
+      const cx = menuCursor + MBTN_W / 2;
+
+      // nineslice — углы-заклёпки остаются цельными
+      const frame = this.scene.add.nineslice(
+        0,
+        0,
+        "ui_v2",
+        "woodButtonClear",
+        MBTN_W,
+        MBTN_H,
+        MBTN_CORNER,
+        MBTN_CORNER,
+        MBTN_CORNER,
+        MBTN_CORNER,
+      );
+
+      // Иконка слева
+      const iconX = -MBTN_W / 2 + MBTN_PAD_L + MBTN_ICON / 2;
+      const icon = this.scene.add
+        .image(iconX, 0, "icon", def.icon)
+        .setDisplaySize(MBTN_ICON, MBTN_ICON);
+
+      // Текст справа от иконки, центрируется по вертикали
+      const labelX = iconX + MBTN_ICON / 2 + MBTN_ICON_GAP;
+      const label = this.scene.add
+        .text(labelX, 0, def.label, menuLabelStyle)
+        .setOrigin(0, 0.5);
+
+      const btn = this.scene.add
+        .container(cx, CENTER_Y + 3, [frame, icon, label])
+        .setSize(MBTN_W, MBTN_H)
         .setDepth(20)
-        .on(
-          "pointerdown",
-          (
-            _p: Phaser.Input.Pointer,
-            _lx: number,
-            _ly: number,
-            e: Phaser.Types.Input.EventData,
-          ) => {
-            e.stopPropagation();
-            onClick();
-          },
-        );
-    });
+        .setInteractive({ useHandCursor: true });
 
-    const totalBtnsW =
-      btnObjs.reduce((s, b) => s + b.width, 0) + btnGap * (btnObjs.length - 1);
+      btn.on(
+        "pointerdown",
+        (
+          _p: Phaser.Input.Pointer,
+          _lx: number,
+          _ly: number,
+          e: Phaser.Types.Input.EventData,
+        ) => {
+          e.stopPropagation();
+          def.onClick();
+        },
+      );
 
-    let cursor = this.scene.scale.width / 2 - totalBtnsW / 2;
-    for (const btn of btnObjs) {
-      btn.setX(cursor + btn.width / 2);
-      cursor += btn.width + btnGap;
+      btn.on("pointerover", () => {
+        this.scene.tweens.killTweensOf(btn);
+        this.scene.tweens.add({
+          targets: btn,
+          scale: 1.05,
+          duration: 100,
+          ease: "Sine.easeOut",
+        });
+      });
+
+      btn.on("pointerout", () => {
+        this.scene.tweens.killTweensOf(btn);
+        this.scene.tweens.add({
+          targets: btn,
+          scale: 1,
+          duration: 100,
+          ease: "Sine.easeOut",
+        });
+      });
+
+      attachTooltip(this.scene, btn, def.tooltip);
+
+      menuBtns.push(btn);
+      menuCursor += MBTN_W + MBTN_GAP;
     }
 
-    this.achievementsBtnObj = btnObjs[3];
+    this.achievementsBtnObj = menuBtns[3];
     this.createAchievementsDot();
 
     this.createBurgerButton(CENTER_Y);
@@ -392,16 +468,29 @@ export class TopBarUI {
 
   private createAchievementsDot() {
     const btn = this.achievementsBtnObj;
-    const dotX = btn.x + btn.width / 2;
-    const dotY = btn.y - btn.height / 2 - 2;
 
-    this.achievementsDotCircle = this.scene.add.circle(0, 0, 6, 0xff2222);
+    const DOT_OFFSET_X = -15;
+    const DOT_OFFSET_Y = 15;
+
+    const dotX = btn.x + btn.width / 2 + DOT_OFFSET_X;
+    const dotY = btn.y - btn.height / 2 + DOT_OFFSET_Y;
+
+    this.achievementsDotCircle = this.scene.add.circle(0, 0, 5, 0xff2222);
     this.achievementsDotCircle.setStrokeStyle(2, 0xffffff);
 
     this.achievementsDot = this.scene.add
       .container(dotX, dotY, [this.achievementsDotCircle])
-      .setDepth(21)
+      .setDepth(25)
       .setVisible(false);
+    this.scene.tweens.add({
+      targets: this.achievementsDotCircle,
+      scale: { from: 1, to: 1.25 },
+      alpha: { from: 1, to: 0.7 },
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
   }
 
   public refreshAchievementsDot() {
@@ -410,6 +499,7 @@ export class TopBarUI {
     if (this.scene.achievementsMenuVisible) {
       this.scene.achievements.markAllSeen();
       this.achievementsDot.setVisible(false);
+      this.scene.tweens.killTweensOf(this.achievementsDotCircle);
       return;
     }
 

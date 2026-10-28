@@ -666,6 +666,10 @@ export class MainScene extends Phaser.Scene {
     this.notificationUI.show(message);
   }
 
+  public showAchievementNotification(name: string) {
+    this.notificationUI.showAchievement(name);
+  }
+
   private drawGrid() {
     const graphics = this.add.graphics();
     graphics.lineStyle(0.5, 0xffffff, 0.4);

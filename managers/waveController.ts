@@ -7,7 +7,7 @@ export class WaveController {
   private scene: MainScene;
 
   public waveInfoText!: Phaser.GameObjects.Text;
-  public skipTimerBtn!: Phaser.GameObjects.Text;
+  public skipTimerBtn!: Phaser.GameObjects.Container;
 
   private waveTimerEvent: Phaser.Time.TimerEvent | null = null;
   private spawnTimerEvent: Phaser.Time.TimerEvent | null = null;
@@ -30,18 +30,70 @@ export class WaveController {
       .setDepth(20)
       .setVisible(false);
 
-    this.skipTimerBtn = this.scene.add
-      .text(this.scene.scale.width / 2, 90, "[Пробел] Пропустить таймер ⏭", {
-        fontSize: "18px",
-        color: "#ffffff",
-        backgroundColor: "#555555",
-        padding: { x: 10, y: 5 },
+    const SKIP_BTN_W = 275;
+    const SKIP_BTN_H = 55;
+    const SKIP_BTN_CORNER = 45;
+    const SKIP_BTN_FRAME = "panelClear";
+
+    const skipBg = this.scene.add.nineslice(
+      0,
+      0,
+      "ui_v2",
+      SKIP_BTN_FRAME,
+      SKIP_BTN_W,
+      SKIP_BTN_H,
+      SKIP_BTN_CORNER + 10,
+      SKIP_BTN_CORNER + 10,
+      SKIP_BTN_CORNER,
+      SKIP_BTN_CORNER,
+    );
+
+    const skipLabel = this.scene.add
+      .text(0, 0, "[пробел] начать волну", {
+        fontSize: "16px",
+        color: "#3d2817",
+        fontStyle: "bold",
+        stroke: "#fff5e0",
+        strokeThickness: 2,
       })
-      .setOrigin(0.5)
+      .setOrigin(0.5);
+
+    this.skipTimerBtn = this.scene.add
+      .container(this.scene.scale.width / 2, 95, [skipBg, skipLabel])
+      .setSize(SKIP_BTN_W, SKIP_BTN_H)
       .setDepth(20)
       .setVisible(false)
       .setInteractive({ useHandCursor: true })
-      .on("pointerdown", () => this.skipPrepPhase());
+      .on(
+        "pointerdown",
+        (
+          _p: Phaser.Input.Pointer,
+          _lx: number,
+          _ly: number,
+          e: Phaser.Types.Input.EventData,
+        ) => {
+          e.stopPropagation();
+          this.skipPrepPhase();
+        },
+      )
+      .on("pointerover", () => {
+        this.scene.tweens.killTweensOf(this.skipTimerBtn);
+        this.scene.tweens.add({
+          targets: this.skipTimerBtn,
+          scale: 1.06,
+          duration: 100,
+          ease: "Sine.easeOut",
+        });
+      })
+      .on("pointerout", () => {
+        this.scene.tweens.killTweensOf(this.skipTimerBtn);
+        this.scene.tweens.add({
+          targets: this.skipTimerBtn,
+          scale: 1,
+          duration: 100,
+          ease: "Sine.easeOut",
+        });
+      });
   }
 
   public startPrepPhase(seconds: number) {
